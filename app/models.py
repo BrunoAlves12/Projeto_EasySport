@@ -1,46 +1,50 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from app.extensions import db
 import enum
 
-db = SQLAlchemy(app)
-
-class EstadoReserva(enum.Enum):
-	ativa = "Ativa"
-	cancelada = "Cancelada"
-	concluida = "Concluida"
 
 
-class User():
+class User(db.Model):
+	__tablename__ = "user"
+
 	id = db.Column(db.Integer, primary_key=True) 
 	nome = db.Column(db.String(30), nullable = False) 
-	email = db.Column(db.String(50), nullable = False) 
+	email = db.Column(db.String(50), unique = True, nullable = False) 
 	password = db.Column(db.String(50), nullable = False)
-	isAdmin = db.Column(db.Bool, nullable = False)
+	isAdmin = db.Column(db.Boolean, default = False)
 
-class Reserva():
+class Reserva(db.Model):
+	__tablename__ = "reserva"
+
 	id = db.Column(db.Integer, primary_key=True)
 	idUser = db.Column(db.Integer, db.ForeignKey('user.id'), nullable = False)
 	idEspaco = db.Column(db.Integer, db.ForeignKey('espaco.id'), nullable = False)
-	dataInicio = db.Column(db.Integer, db.Date, nullable = False)
-	dataFim = db.Column(db.Integer, db.Date, nullable = False)
-	estado = db.Column(db.Enum(EstadoReserva), nullable= False, default=EstadoReserva.ativa)
+	dataInicio = db.Column(db.DateTime, nullable=False)
+	dataFim = db.Column(db.DateTime, nullable=False)
+	estado = db.Column(db.String(20), default ="ativa")
 
 	
 		 
-class Espaco():
+class Espaco(db.Model):
+	__tablename__ = "espaco"
+
 	id = db.Column(db.Integer, primary_key=True)
 	nome = db.Column(db.String(30), nullable = False)
-	descricao = db.Column(db.String(100), nullable = False)
-	imagem = db.Column(db.String(30), nullable = False)
-	precoHora = db.Column(db.Decimal, nullable = False)
-	ativo = db.Column(db.Bool, nullable = False)
+	descricao = db.Column(db.Text)
+	imagem = db.Column(db.String(200))
+	precoHora = db.Column(db.Float, nullable = False)
+	ativo = db.Column(db.Boolean, nullable = False)
 
-class Pagamento():
+
+class Pagamento(db.Model):
+	__tablename__ = "pagamento"
+
 	id = db.Column(db.Integer, primary_key=True)
 	idUser = db.Column(db.Integer, db.ForeignKey('user.id'), nullable = False)
 	idReserva = db.Column(db.Integer, db.ForeignKey('reserva.id'), nullable = False)
-	valor = db.Column(db.Decimal, nullable = False)
-	dataPagamento = db.Column(db.Integer, db.Date, nullable = False)
-	estado = db.Column(db.Bool, nullable = False)
+	valor = db.Column(db.Float, nullable = False)
+	dataPagamento = db.Column(db.DateTime)
+	estado = db.Column(db.String(20), default="pendente")
 	
 	
