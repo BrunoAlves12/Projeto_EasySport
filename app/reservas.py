@@ -14,6 +14,19 @@ def criar_reserva():
     inicio = datetime.fromisoformat(request.json["inicio"])
     fim = datetime.fromisoformat(request.json["fim"])
 
+    #validações
+    if fim <= inicio:
+        return {"erro": "Hora do fim inválida"}
+    
+    reserva_existente = Reserva.query.filter(
+        Reserva.idEspaco == espaco_id,
+        Reserva.dataInicio < fim,
+        Reserva.dataFim > inicio,
+    ).first()
+
+    if reserva_existente:
+        return {"erro": "Já existe uma reserva para este espaço nesse horário"}
+
     reserva = Reserva(
         idUser = user_id,
         idEspaco = espaco_id,

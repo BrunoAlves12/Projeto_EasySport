@@ -1,0 +1,11 @@
+<h1>Lista de Espaços</h1>
+
+<ul>
+  {% for e in espacos %}
+  <li>{{ e.nome }} - {{ e.descricao }} - {{ e.precoHora }}€</li>
+  {% endfor %}
+</ul>
+
+<a href="/">
+  <button type="button">Voltar ao Inicio</button>
+</a>

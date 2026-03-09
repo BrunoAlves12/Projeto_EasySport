@@ -1,5 +1,7 @@
 from flask import Flask
 from .extensions import db
+from .espaco import espaco_bp
+from .routes import main_bp
 
 def create_app():
     app = Flask(__name__, template_folder="../templates")
@@ -18,6 +20,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(reservas_bp)
     app.register_blueprint(pagamentos_bp)
+    app.register_blueprint(espaco_bp)
     app.register_blueprint(main_bp)
     
     return app

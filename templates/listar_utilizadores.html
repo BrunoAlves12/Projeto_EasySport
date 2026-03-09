@@ -1,0 +1,46 @@
+<h1>Lista de Utilizadores</h1>
+
+<a href="/">
+  <button>Voltar ao Menu</button>
+</a>
+
+<br /><br />
+
+{% with messages = get_flashed_messages() %} {% if messages %} {% for message in
+messages %}
+<p style="color: green">{{ message }}</p>
+{% endfor %} {% endif %} {% endwith %}
+
+<table border="1" cellpadding="10">
+  <tr>
+    <th>ID</th>
+    <th>Nome</th>
+    <th>Username</th>
+    <th>Email</th>
+    <th>Estado</th>
+    <th>Ações</th>
+  </tr>
+
+  {% for user in users %}
+  <tr>
+    <td>{{ user.id }}</td>
+    <td>{{ user.nome }}</td>
+    <td>{{ user.username }}</td>
+    <td>{{ user.email }}</td>
+    <td>{{ user.estado }}</td>
+
+    <td>
+      <form action="/remover-utilizador/{{ user.id }}" method="post">
+        <button
+          type="submit"
+          onclick="
+            return confirm('Tem a certeza que quer remover este utilizador?');
+          "
+        >
+          Remover
+        </button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>

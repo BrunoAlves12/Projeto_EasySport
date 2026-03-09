@@ -1,11 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Document</title>
-</head>
-<body>
-	<h1>Boas meu rei</h1>
-</body>
-</html>
+<h1>EasySport</h1>
+
+{% with messages = get_flashed_messages() %} {% if messages %} {% for message in
+messages %}
+<p style="color: green">{{ message }}</p>
+{% endfor %} {% endif %} {% endwith %}
+
+<a href="/registar-page">
+  <button>Criar Utilizador</button>
+</a>
+
+<br /><br />
+
+<a href="/espaco-page">
+  <button>Criar Espaço</button>
+</a>
+
+<br /><br />
+
+<a href="/listar-espacos">
+  <button>Listar Espaços</button>
+</a>
+
+<br /><br />
+
+<a href="/listar-utilizadores">
+  <button>Listar Utilizadores</button>
+</a>
