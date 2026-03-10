@@ -30,6 +30,10 @@ messages %}
     <td>{{ user.estado }}</td>
 
     <td>
+      <a href="/editar-utilizador/{{ user.id }}">
+        <button>Editar</button>
+      </a>
+
       <form action="/remover-utilizador/{{ user.id }}" method="post">
         <button
           type="submit"

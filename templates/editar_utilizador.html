@@ -1,0 +1,36 @@
+<h1>Editar Utilizador</h1>
+
+{% with messages = get_flashed_messages() %} {% if messages %} {% for message in
+messages %}
+<p style="color: red">{{ message }}</p>
+{% endfor %} {% endif %} {% endwith %}
+
+<form action="/editar-utilizador/{{ user.id }}" method="post">
+  <input type="text" name="nome" value="{{ user.nome }}" placeholder="Nome" />
+
+  <br /><br />
+
+  <input
+    type="text"
+    name="username"
+    value="{{ user.username }}"
+    placeholder="Username"
+  />
+
+  <br /><br />
+
+  <input
+    type="email"
+    name="email"
+    value="{{ user.email }}"
+    placeholder="Email"
+  />
+
+  <br /><br />
+
+  <button type="submit">Guardar alterações</button>
+
+  <a href="/utilizadores">
+    <button type="button">Cancelar</button>
+  </a>
+</form>

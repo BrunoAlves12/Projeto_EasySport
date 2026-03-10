@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, redirect, url_for, flash
 from app.models import Espaco
 from app.extensions import db
 
@@ -15,10 +15,12 @@ def criar_espaco():
 
     # validações
     if not nome:
-        return {"erro": "Nome do espaço é obrigatório"}
+        flash("Nome do espaço é obrigatório")
+        return redirect(url_for("main.espaco_page"))
 
     if preco <= 0:
-        return {"erro": "Preço deve ser maior que 0"}
+        flash("Preço Inválido!")
+        return redirect(url_for("main.espaco_page"))
 
     espaco = Espaco(
         nome=nome, 
@@ -30,7 +32,9 @@ def criar_espaco():
     db.session.add(espaco)
     db.session.commit()
 
-    return {"mensagem": "Espaço criado com sucesso"}
+    flash("Espaço criado com sucesso!")
+
+    return redirect(url_for("main.index"))
 
 
 @espaco_bp.route("/espaco", methods=["GET"])

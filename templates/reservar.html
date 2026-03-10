@@ -1,0 +1,42 @@
+<h1>Criar Reserva</h1>
+
+<a href="/">Voltar ao Início</a>
+
+<br /><br />
+
+{% with messages = get_flashed_messages() %} {% if messages %} {% for message in
+messages %}
+<p style="color: red">{{ message }}</p>
+{% endfor %} {% endif %} {% endwith %}
+
+<form action="/reservar" method="post">
+  <label>Utilizador</label>
+  <select name="user_id">
+    {% for user in users %}
+    <option value="{{ user.id }}">{{ user.nome }}</option>
+    {% endfor %}
+  </select>
+
+  <br /><br />
+
+  <label>Espaço</label>
+  <select name="espaco_id">
+    {% for espaco in espacos %}
+    <option value="{{ espaco.id }}">{{ espaco.nome }}</option>
+    {% endfor %}
+  </select>
+
+  <br /><br />
+
+  <label>Início</label>
+  <input type="datetime-local" name="inicio" required />
+
+  <br /><br />
+
+  <label>Fim</label>
+  <input type="datetime-local" name="fim" required />
+
+  <br /><br />
+
+  <button type="submit">Criar Reserva</button>
+</form>

@@ -1,0 +1,55 @@
+<h1>Reservas</h1>
+
+<a href="/">Voltar ao Início</a>
+
+<br /><br />
+
+{% with messages = get_flashed_messages() %} {% if messages %} {% for message in
+messages %}
+<p style="color: green">{{ message }}</p>
+{% endfor %} {% endif %} {% endwith %}
+
+<table border="1" cellpadding="10">
+  <tr>
+    <th>ID</th>
+    <th>Utilizador</th>
+    <th>Espaço</th>
+    <th>Início</th>
+    <th>Fim</th>
+    <th>Estado</th>
+    <th>Ações</th>
+  </tr>
+
+  {% for r in reservas %}
+  <tr>
+    <td>{{ r.id }}</td>
+    <td>{{ users[r.idUser].nome }}</td>
+    <td>{{ espacos[r.idEspaco].nome }}</td>
+    <td>{{ r.dataInicio }}</td>
+    <td>{{ r.dataFim }}</td>
+    <td>{{ r.estado.value }}</td>
+
+    <td>
+      {% if r.estado.value == "pendente" %}
+
+      <form
+        action="/pagar-reserva/{{ r.id }}"
+        method="post"
+        onsubmit="return confirm('Confirmar pagamento?');"
+      >
+        <button type="submit">Pagar</button>
+      </form>
+
+      <form
+        action="/cancelar-reserva/{{ r.id }}"
+        method="post"
+        onsubmit="return confirm('Cancelar reserva?');"
+      >
+        <button type="submit">Cancelar</button>
+      </form>
+
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>

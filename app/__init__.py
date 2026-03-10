@@ -15,6 +15,7 @@ def create_app():
     from .reservas import reservas_bp
     from .pagamentos import pagamentos_bp
     from .routes import main_bp
+    from .espaco import espaco_bp
 
    
     app.register_blueprint(auth_bp)
@@ -22,5 +23,6 @@ def create_app():
     app.register_blueprint(pagamentos_bp)
     app.register_blueprint(espaco_bp)
     app.register_blueprint(main_bp)
+    
     
     return app
