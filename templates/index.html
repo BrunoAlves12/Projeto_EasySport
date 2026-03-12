@@ -1,46 +1,93 @@
-<h1>EasySport</h1>
+<!doctype html>
+<html>
+  <head>
+    <title>EasySport</title>
+  </head>
 
-{% with messages = get_flashed_messages() %} {% if messages %} {% for message in
-messages %}
-<p style="color: green">{{ message }}</p>
-{% endfor %} {% endif %} {% endwith %}
+  <body>
+    <h1>EasySport</h1>
 
-<a href="/registar-page">
-  <button>Criar Utilizador</button>
-</a>
+    {% with messages = get_flashed_messages() %} {% if messages %} {% for
+    message in messages %}
+    <p style="color: green">{{ message }}</p>
+    {% endfor %} {% endif %} {% endwith %} {% if session.get("user_id") %}
 
-<br /><br />
+    <p>Bem-vindo {{ session["username"] }}</p>
 
-<a href="/espaco-page">
-  <button>Criar Espaço</button>
-</a>
+    {% if session.get("is_admin") %}
 
-<br /><br />
+    <h3>Painel Administrador</h3>
 
-<a href="/listar-espacos">
-  <button>Listar Espaços</button>
-</a>
+    <a href="{{ url_for('main.listar_utilizadores') }}">
+      <button>Gerir Utilizadores</button>
+    </a>
 
-<br /><br />
+    <br /><br />
 
-<a href="/listar-utilizadores">
-  <button>Listar Utilizadores</button>
-</a>
+    <a href="{{ url_for('main.listar_espacos_page') }}">
+      <button>Ver Espaços</button>
+    </a>
 
-<br /><br />
+    <br /><br />
 
-<a href="/reservar">
-  <button>Criar Reserva</button>
-</a>
+    <a href="{{ url_for('reservas.listar_reservas') }}">
+      <button>Ver Reservas</button>
+    </a>
 
-<br /><br />
+    <br /><br />
 
-<a href="/reservas">
-  <button>Listar Reservas</button>
-</a>
+    <a href="{{ url_for('main.espaco_page') }}">
+      <button>Criar Espaço</button>
+    </a>
 
-<!--<br />
-<a href="/pagamentos">
-  <button>Ver Pagamentos</button>
-</a>
-<br />-->
+    {% else %}
+
+    <h3>Área Cliente</h3>
+
+    <a href="{{ url_for('main.listar_espacos_page') }}">
+      <button>Ver Espaços</button>
+    </a>
+
+    <br /><br />
+
+    <a href="{{ url_for('reservas.reservar_page') }}">
+      <button>Fazer Reserva</button>
+    </a>
+
+    <br /><br />
+
+    <a href="{{ url_for('reservas.minha_reservas') }}">
+      <button>Minhas Reservas</button>
+    </a>
+
+    <br /><br />
+
+    <a href="{{ url_for('main.perfil_utilizador') }}">
+      <button>Meu Perfil</button>
+    </a>
+
+    {% endif %}
+
+    <br /><br />
+
+    <a href="{{ url_for('auth.logout') }}">
+      <button>Logout</button>
+    </a>
+
+    {% else %}
+
+    <h3>Bem-vindo ao EasySport</h3>
+
+    <a href="{{ url_for('auth.login_page') }}">
+      <button>Login</button>
+    </a>
+
+    <br /><br />
+
+    <a href="{{ url_for('auth.register_page') }}">
+      <button>Registar</button>
+    </a>
+
+    {% endif %}
+  </body>
+</html>

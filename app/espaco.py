@@ -1,4 +1,4 @@
-from flask import Blueprint, request, redirect, url_for, flash
+from flask import Blueprint, request, redirect, url_for, flash, session
 from app.models import Espaco
 from app.extensions import db
 
@@ -21,6 +21,10 @@ def criar_espaco():
     if preco <= 0:
         flash("Preço Inválido!")
         return redirect(url_for("main.espaco_page"))
+    
+    if not session.get("is_admin"):
+        flash("Acesso restrito ao admin")
+        return redirect(url_for("main.index"))
 
     espaco = Espaco(
         nome=nome, 

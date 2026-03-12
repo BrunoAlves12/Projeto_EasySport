@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for,flash
+from flask import Blueprint, render_template, request, redirect, url_for,flash, session
 from app.models import User
 from app.extensions import db
 import re
@@ -65,3 +65,42 @@ def register():
 
     flash("Utilizador criado com sucesso!")
     return redirect(url_for("main.index"))
+
+
+@auth_bp.route("/login")
+def login_page():
+    return render_template("login.html")
+
+
+@auth_bp.route("/login", methods=["POST"])
+def login():
+
+    username = request.form["username"]
+    password = request.form["password"]
+
+    if not username or not password:
+        flash("Preencha todos os campos")
+        return redirect(url_for("auth.login_page"))
+
+    user = User.query.filter_by(username=username).first()
+
+    if not user or user.password != password:
+        flash("Credenciais inválidas")
+        return redirect(url_for("auth.login_page"))
+
+    session["user_id"] = user.id
+    session["username"] = user.username
+    session["is_admin"] = user.isAdmin
+
+    flash("Login efetuado com sucesso")
+
+    return redirect(url_for("main.index"))
+@auth_bp.route("/logout")
+def logout():
+
+    session.clear()
+
+    flash("Sessão Terminada")
+
+    return redirect(url_for("main.index"))
+

@@ -1,4 +1,4 @@
-from flask import Blueprint, redirect, render_template, url_for, flash, request
+from flask import Blueprint, redirect, render_template, url_for, flash, request, session
 from app.models import Espaco, User
 from app.extensions import db
 
@@ -7,6 +7,7 @@ main_bp = Blueprint("main", __name__)
 
 @main_bp.route("/")
 def index():
+     
     return render_template("index.html")
 
 
@@ -16,6 +17,15 @@ def registar_page():
 
 @main_bp.route("/espaco-page")
 def espaco_page():
+
+    if "user_id" not in session:
+        flash("Tem de fazer login primeiro")
+        return redirect(url_for("auth.login_page"))
+
+    if not session.get("is_admin"):
+        flash("Acesso restrito ao administrador")
+        return redirect(url_for("main.index"))
+    
     return render_template("espaco.html")
 
 @main_bp.route("/listar-espacos")
@@ -26,13 +36,29 @@ def listar_espacos_page():
 @main_bp.route("/listar-utilizadores")
 def listar_utilizadores():
 
-    users = User.query.all()
+    if "user_id" not in session:
+        flash("Tem de fazer login primeiro")
+        return redirect(url_for("auth.login_page"))
+
+    if not session.get("is_admin"):
+        flash("Acesso restrito ao administrador")
+        return redirect(url_for("main.index"))
+    
+    users = User.query.filter_by(isAdmin=False).all()
 
     return render_template("listar_utilizadores.html", users=users)
 
 
 @main_bp.route("/remover-utilizador/<int:user_id>", methods=["POST"])
 def remover_utilizador(user_id):
+
+    if "user_id" not in session:
+        flash("Tem de fazer login primeiro")
+        return redirect(url_for("auth.login_page"))
+
+    if not session.get("is_admin"):
+        flash("Acesso restrito ao administrador")
+        return redirect(url_for("main.index"))
 
     user = User.query.get_or_404(user_id)
 
@@ -43,10 +69,27 @@ def remover_utilizador(user_id):
 
     return redirect(url_for("main.listar_utilizadores"))
 
+@main_bp.route("/perfil-utilizador")
+def perfil_utilizador():
 
+    if "user_id" not in session:
+        flash("Tem de fazer login")
+        return redirect(url_for("auth.login_page"))
+
+    user = User.query.get(session["user_id"])
+
+    return render_template("editar_utilizador.html", user=user)
 
 @main_bp.route("/editar-utilizador/<int:user_id>")
 def editar_utilizador_page(user_id):
+
+    if "user_id" not in session:
+        flash("Tem de fazer login primeiro")
+        return redirect(url_for("auth.login_page"))
+
+    if not session.get("is_admin"):
+        flash("Acesso restrito ao administrador")
+        return redirect(url_for("main.index"))
 
     user = User.query.get_or_404(user_id)
 
@@ -96,4 +139,9 @@ def editar_utilizador(user_id):
 
 @main_bp.route("/reservar-page")
 def reservar_page():
+
+    if "user_id" not in session:
+        flash("Tem de fazer login primeiro")
+        return redirect(url_for("auth.login_page"))
+     
     return render_template("reservar.html")

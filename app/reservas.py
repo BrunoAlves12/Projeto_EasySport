@@ -1,4 +1,4 @@
-from flask import Blueprint, request, flash, redirect, url_for, render_template
+from flask import Blueprint, request, flash, redirect, url_for, render_template, session
 from app.models import Pagamento, Reserva, User, Espaco, Pagamento
 from app.extensions import db
 from datetime import datetime
@@ -7,14 +7,22 @@ reservas_bp = Blueprint("reservas", __name__)
 
 @reservas_bp.route("/reservar")
 def reservar_page():
-    users = User.query.all()
+
+    if "user_id" not in session:
+        return redirect(url_for("auth.login_page"))
+
+    users = User.query.filter_by(isAdmin=False).all()
     espacos = Espaco.query.filter_by(ativo=True).all()
+
     return render_template("reservar.html", users=users, espacos=espacos)
 
 @reservas_bp.route("/reservar", methods=["POST"])
 def criar_reserva():
 
-    user_id = request.form["user_id"]
+    if "user_id" not in session:
+        return redirect(url_for("auth.login_page"))
+
+    user_id = session["user_id"]
     espaco_id = request.form["espaco_id"]
 
     inicio_str = request.form["inicio"]
@@ -31,6 +39,10 @@ def criar_reserva():
     #validações
     if fim <= inicio:
         flash("Hora do fim inválida")
+        return redirect(url_for("reservas.reservar_page"))
+    
+    if inicio < datetime.now():
+        flash("Não é possível reservar datas no passado")
         return redirect(url_for("reservas.reservar_page"))
     
     reserva_existente = Reserva.query.filter(
@@ -113,3 +125,22 @@ def pagar_reserva(reserva_id):
     flash("Pagamento confirmado e reserva concluída")
 
     return redirect(url_for("reservas.listar_reservas"))
+
+
+@reservas_bp.route("/minhas-reservas")
+def minha_reservas():
+
+    if "user_id" not in session:
+        return redirect(url_for("auth.login_page"))
+    
+    reservas = Reserva.query.filter_by(idUser = session["user_id"]).all()
+
+    users = {u.id: u for u in User.query.filter_by(isAdmin=False).all()}
+    espacos = {e.id: e for e in Espaco.query.all()}
+
+    return render_template(
+        "listar_reservas.html",
+        reservas = reservas,
+        users = users,
+        espacos = espacos
+    )
