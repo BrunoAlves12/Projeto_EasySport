@@ -24,6 +24,31 @@ def register():
     dataNascimento = datetime.strptime(data_str, "%Y-%m-%d").date()
 
     #validações
+    if len(password) < 8 or len(password) > 15:
+        flash("A password precisa de ter entre 8 e 15 caracteres.")
+        return redirect(url_for("auth.register_page"))
+
+    numero_caracteres = False
+    maiuscula = False
+    minuscula = False
+    especial = False
+
+    for char in password:
+        if char.isdigit():
+            numero_caracteres = True
+        elif char.isalpha():
+            if char.isupper():
+                maiuscula = True
+            else:
+                minuscula = True
+        else:
+            especial = True
+
+    if not numero_caracteres or not maiuscula or not minuscula or not especial:
+        flash("A password precisa de ter uma maiúscula, uma minúscula, um número e um carácter especial.")
+        return redirect(url_for("auth.register_page"))
+
+
     if not nome or not email or not password or not username or not dataNascimento:
         flash("Todos os campos são obrigatórios!")
         return redirect(url_for("auth.register_page"))

@@ -1,5 +1,5 @@
 from flask import Blueprint, redirect, render_template, url_for, flash, request, session
-from app.models import Espaco, User
+from app.models import Espaco, EstadoUser, User
 from app.extensions import db
 
 main_bp = Blueprint("main", __name__)
@@ -30,8 +30,7 @@ def espaco_page():
 
 @main_bp.route("/listar-espacos")
 def listar_espacos_page():
-    espacos = Espaco.query.all()
-    return render_template("listar_espacos.html", espacos=espacos)
+    return redirect(url_for("espaco.listar_espacos"))
 
 @main_bp.route("/listar-utilizadores")
 def listar_utilizadores():
@@ -98,14 +97,23 @@ def editar_utilizador_page(user_id):
 
 @main_bp.route("/editar-utilizador/<int:user_id>", methods=["POST"])
 def editar_utilizador(user_id):
+     
+    if "user_id" not in session:
+        flash("Tem de fazer login primeiro")
+        return redirect(url_for("auth.login_page"))
+
+    if not session.get("is_admin"):
+        flash("Acesso restrito ao administrador")
+        return redirect(url_for("main.index"))
 
     user = User.query.get_or_404(user_id)
 
     nome = request.form["nome"]
     username = request.form["username"]
     email = request.form["email"]
+    estado = request.form["estado"]
 
-    if not nome or not username or not email:
+    if not nome or not username or not email or not estado:
         flash("Todos os campos são obrigatórios")
         return redirect(url_for("main.editar_utilizador_page", user_id=user.id))
 
@@ -130,6 +138,11 @@ def editar_utilizador(user_id):
     user.nome = nome
     user.username = username
     user.email = email
+    
+    if estado == "ativo":
+        user.estado = EstadoUser.ativo
+    else:
+        user.estado = EstadoUser.inativo
 
     db.session.commit()
 

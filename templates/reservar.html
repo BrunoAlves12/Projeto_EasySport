@@ -4,25 +4,22 @@
 
 <br /><br />
 
-{% with messages = get_flashed_messages() %} {% if messages %} {% for message in
-messages %}
-<p style="color: red">{{ message }}</p>
-{% endfor %} {% endif %} {% endwith %}
+{% with messages = get_flashed_messages() %}
+  {% if messages %} 
+    {% for message in messages %}
+      <p style="color: red">{{ message }}</p>
+    {% endfor %} 
+  {% endif %} 
+{% endwith %}
+
 
 <form action="/reservar" method="post">
-  <label>Utilizador</label>
-  <select name="user_id">
-    {% for user in users %}
-    <option value="{{ user.id }}">{{ user.nome }}</option>
-    {% endfor %}
-  </select>
-
-  <br /><br />
-
   <label>Espaço</label>
   <select name="espaco_id">
     {% for espaco in espacos %}
-    <option value="{{ espaco.id }}">{{ espaco.nome }}</option>
+    <option value="{{ espaco.id }}">
+      {{ espaco.nome }} - {{ espaco.precoHora }}€/hora
+    </option>
     {% endfor %}
   </select>
 

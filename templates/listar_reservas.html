@@ -29,27 +29,29 @@ messages %}
     <td>{{ r.dataFim }}</td>
     <td>{{ r.estado.value }}</td>
 
-    <td>
-      {% if r.estado.value == "pendente" %}
+<td>
+  {% if r.estado.value == "pendente" %}
 
-      <form
-        action="/pagar-reserva/{{ r.id }}"
-        method="post"
-        onsubmit="return confirm('Confirmar pagamento?');"
-      >
-        <button type="submit">Pagar</button>
-      </form>
+    {% if not session.get("is_admin") %}
+    <form
+      action="/pagar-reserva/{{ r.id }}"
+      method="post"
+      onsubmit="return confirm('Confirmar pagamento?');"
+    >
+      <button type="submit">Pagar</button>
+    </form>
+    {% endif %}
 
-      <form
-        action="/cancelar-reserva/{{ r.id }}"
-        method="post"
-        onsubmit="return confirm('Cancelar reserva?');"
-      >
-        <button type="submit">Cancelar</button>
-      </form>
+    <form
+      action="/cancelar-reserva/{{ r.id }}"
+      method="post"
+      onsubmit="return confirm('Cancelar reserva?');"
+    >
+      <button type="submit">Cancelar</button>
+    </form>
 
-      {% endif %}
-    </td>
-  </tr>
+  {% endif %}
+  </td>
+</tr>
   {% endfor %}
 </table>

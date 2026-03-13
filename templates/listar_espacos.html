@@ -2,10 +2,28 @@
 
 <ul>
   {% for e in espacos %}
-  <li>{{ e.nome }} - {{ e.descricao }} - {{ e.precoHora }}€</li>
+  <li>
+    {{ e.nome }} - {{ e.descricao }} - {{ e.precoHora }}€ {% if
+    session.get("is_admin") %} {% if e.ativo %}
+    <a href="{{ url_for('espaco.editar_espaco', id=e.id) }}">
+      <button type="button">Editar</button>
+    </a>
+
+    <a href="{{ url_for('espaco.desativar_espaco', id=e.id) }}">
+      <button type="button">Desativar</button>
+    </a>
+    {% else %}
+    <strong>(Inativo)</strong>
+
+    <a href="{{ url_for('espaco.ativar_espaco', id=e.id) }}">
+      <button type="button">Ativar</button>
+    </a>
+
+    {% endif %} {% endif %}
+  </li>
   {% endfor %}
 </ul>
 
-<a href="/">
-  <button type="button">Voltar ao Inicio</button>
+<a href="{{ url_for('main.index') }}">
+  <button type="button">Voltar ao Início</button>
 </a>

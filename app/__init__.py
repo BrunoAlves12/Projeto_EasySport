@@ -2,12 +2,14 @@ from flask import Flask
 from .extensions import db
 from .espaco import espaco_bp
 from .routes import main_bp
+import os
 
 def create_app():
     app = Flask(__name__, template_folder="../templates")
 
-    app.config["SECRET_KEY"] = "secret"
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///easycourt.db"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
 
