@@ -5,7 +5,11 @@ from .routes import main_bp
 import os
 
 def create_app():
-    app = Flask(__name__, template_folder="../templates")
+    app = Flask(
+        __name__,
+        template_folder="../templates",
+        static_folder="../static",
+    )
 
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///easycourt.db"
@@ -25,6 +29,5 @@ def create_app():
     app.register_blueprint(pagamentos_bp)
     app.register_blueprint(espaco_bp)
     app.register_blueprint(main_bp)
-    
     
     return app

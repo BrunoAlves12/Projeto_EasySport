@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EasySport</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+
+  <body class="landing-page">
+    <div class="landing-shell">
+      <header class="landing-header">
+        <a class="landing-brand" href="{{ url_for('main.index') }}">
+          <img
+            class="landing-brand__logo"
+            src="{{ url_for('static', filename='img/easysport-logo.png') }}"
+            alt="Logo EasySport"
+          />
+          <div>
+            <p class="landing-brand__eyebrow">Plataforma desportiva</p>
+            <h1>EasySport</h1>
+          </div>
+        </a>
+
+        <nav class="landing-actions">
+          <a class="landing-button landing-button--secondary" href="{{ url_for('auth.login_page') }}">
+            Login
+          </a>
+          <a class="landing-button" href="{{ url_for('auth.register_page') }}">
+            Registar
+          </a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="landing-hero">
+          <div class="landing-hero__overlay">
+            <p class="landing-hero__eyebrow">Reserva desportiva sem complicações</p>
+            <h2>Encontra o espaço certo para jogar, treinar e reservar com facilidade.</h2>
+            <p class="landing-hero__text">
+              Uma plataforma pensada para consultar espaços, organizar reservas e manter tudo mais simples.
+            </p>
+            <a class="landing-button landing-button--hero" href="{{ url_for('main.espacos_homepage') }}">
+              Ver espaços
+            </a>
+          </div>
+        </section>
+
+        <section class="landing-info">
+          <div class="landing-info__header">
+            <p class="landing-info__eyebrow">Como funciona</p>
+            <h3>Uma navegação simples do início ao fim</h3>
+          </div>
+
+          <div class="landing-info__grid">
+            <article class="landing-info-card">
+              <span class="landing-info-card__step">01</span>
+              <h4>Consultar espaços</h4>
+              <p>Explora os espaços disponíveis e encontra rapidamente o que precisas.</p>
+            </article>
+
+            <article class="landing-info-card">
+              <span class="landing-info-card__step">02</span>
+              <h4>Reservar rapidamente</h4>
+              <p>Entra na tua conta e avança para uma reserva com poucos passos.</p>
+            </article>
+
+            <article class="landing-info-card">
+              <span class="landing-info-card__step">03</span>
+              <h4>Gestão organizada</h4>
+              <p>Acompanha a tua atividade e mantém as reservas sempre bem organizadas.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer class="landing-footer">
+        <p>EasySport, reservas desportivas com uma experiência simples e moderna.</p>
+      </footer>
+    </div>
+  </body>
+</html>

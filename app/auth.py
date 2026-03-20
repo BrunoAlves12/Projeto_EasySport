@@ -89,8 +89,7 @@ def register():
     db.session.commit()
 
     flash("Utilizador criado com sucesso!")
-    return redirect(url_for("main.index"))
-
+    return redirect(url_for("main.espacos_homepage"))
 
 @auth_bp.route("/login")
 def login_page():
@@ -119,7 +118,7 @@ def login():
 
     flash("Login efetuado com sucesso")
 
-    return redirect(url_for("main.index"))
+    return redirect(url_for("main.espacos_homepage"))
 @auth_bp.route("/logout")
 def logout():
 

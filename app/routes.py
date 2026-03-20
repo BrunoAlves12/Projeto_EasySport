@@ -1,14 +1,47 @@
 from flask import Blueprint, redirect, render_template, url_for, flash, request, session
-from app.models import Espaco, EstadoUser, User
+from app.models import EstadoUser, User
 from app.extensions import db
 
 main_bp = Blueprint("main", __name__)
 
 
+def _espacos_homepage():
+    return [
+        {
+            "nome": "Basket Park",
+            "modalidade": "Basquetebol",
+            "precoHora": 18.0,
+            "ativo": True,
+            "imagem": "img/basket.png",
+        },
+        {
+            "nome": "Estádio RedBull",
+            "modalidade": "Futebol",
+            "precoHora": 32.0,
+            "ativo": True,
+            "imagem": "img/futebol.png",
+        },
+        {
+            "nome": "Padel Club Indoor",
+            "modalidade": "Padel",
+            "precoHora": 20.0,
+            "ativo": True,
+            "imagem": "img/padel.png",
+        },
+    ]
+
+
 @main_bp.route("/")
 def index():
-     
-    return render_template("index.html")
+    if session.get("user_id"):
+        return redirect(url_for("main.espacos_homepage"))
+
+    return render_template("landing.html")
+
+
+@main_bp.route("/espacos")
+def espacos_homepage():
+    return render_template("index.html", espacos_destaque=_espacos_homepage())
 
 
 @main_bp.route("/registar-page")
