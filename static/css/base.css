@@ -1,0 +1,18 @@
+:root {
+  --auth-bg: #f6f1e8;
+  --auth-surface: rgba(255, 252, 247, 0.92);
+  --auth-surface-strong: #fffaf2;
+  --auth-border: rgba(86, 71, 52, 0.12);
+  --auth-text: #2f261e;
+  --auth-muted: #6c6259;
+  --auth-accent: #d88b74;
+  --auth-accent-hover: #c6775f;
+  --auth-accent-soft: rgba(216, 139, 116, 0.16);
+  --auth-shadow: 0 22px 55px rgba(69, 54, 40, 0.14);
+  --auth-radius: 28px;
+  --auth-input-radius: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}

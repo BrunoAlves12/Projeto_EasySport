@@ -1,29 +1,119 @@
-<h1>Lista de Espaços</h1>
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerir Espaços | EasySport</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/base.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/admin.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/espacos.css') }}"
+    />
+  </head>
 
-<ul>
-  {% for e in espacos %}
-  <li>
-    {{ e.nome }} - {{ e.descricao }} - {{ e.precoHora }}€ {% if
-    session.get("is_admin") %} {% if e.ativo %}
-    <a href="{{ url_for('espaco.editar_espaco', id=e.id) }}">
-      <button type="button">Editar</button>
-    </a>
+  <body class="admin-page spaces-page">
+    <div class="admin-shell">
+      <header class="admin-header">
+        <a class="admin-brand" href="{% if session.get('is_admin') %}{{ url_for('main.admin_dashboard') }}{% else %}{{ url_for('main.index') }}{% endif %}">
+          <img
+            class="admin-brand__logo"
+            src="{{ url_for('static', filename='img/easysport-logo.png') }}"
+            alt="Logo EasySport"
+          />
+          <div>
+            <p class="admin-brand__eyebrow">Painel de espaços</p>
+            <h1>EasySport</h1>
+          </div>
+        </a>
 
-    <a href="{{ url_for('espaco.desativar_espaco', id=e.id) }}">
-      <button type="button">Desativar</button>
-    </a>
-    {% else %}
-    <strong>(Inativo)</strong>
+        <div class="spaces-header__actions">
+          {% if session.get("is_admin") %}
+          <a class="spaces-button spaces-button--primary" href="{{ url_for('main.espaco_page') }}">
+            Adicionar espaço
+          </a>
+          {% endif %}
 
-    <a href="{{ url_for('espaco.ativar_espaco', id=e.id) }}">
-      <button type="button">Ativar</button>
-    </a>
+          <a class="spaces-button spaces-button--secondary" href="{% if session.get('is_admin') %}{{ url_for('main.admin_dashboard') }}{% else %}{{ url_for('main.index') }}{% endif %}">
+            Voltar
+          </a>
+        </div>
+      </header>
 
-    {% endif %} {% endif %}
-  </li>
-  {% endfor %}
-</ul>
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="admin-messages">
+            {% for message in messages %}
+              <p class="admin-alert">{{ message }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
 
-<a href="{{ url_for('main.index') }}">
-  <button type="button">Voltar ao Início</button>
-</a>
+      <main class="admin-main spaces-main">
+        <section class="admin-section">
+          <div class="admin-section__header spaces-section__header">
+            <div>
+              <p class="admin-section__eyebrow">Listagem</p>
+              <h3>Espaços registados</h3>
+            </div>
+          </div>
+
+          <div class="spaces-grid">
+            {% for e in espacos %}
+            <article class="spaces-card">
+              <div class="spaces-card__image-wrap">
+                <img
+                  class="spaces-card__image"
+                  src="{{ url_for('static', filename=e.imagem_listagem) }}"
+                  alt="{{ e.nome }}"
+                />
+                <span class="spaces-status {% if e.ativo %}spaces-status--active{% else %}spaces-status--inactive{% endif %}">
+                  {% if e.ativo %}Ativo{% else %}Inativo{% endif %}
+                </span>
+              </div>
+
+              <div class="spaces-card__content">
+                <div class="spaces-card__top">
+                  <div>
+                    <h4>{{ e.nome }}</h4>
+                  </div>
+                  <strong class="spaces-card__price">{{ "%.2f"|format(e.precoHora) }}€/hora</strong>
+                </div>
+
+                <p class="spaces-card__description">
+                  {{ e.descricao or "Sem descrição disponível." }}
+                </p>
+
+                {% if session.get("is_admin") %}
+                <div class="spaces-card__actions">
+                  <a class="spaces-button spaces-button--secondary" href="{{ url_for('espaco.editar_espaco', id=e.id) }}">
+                    Editar
+                  </a>
+
+                  {% if e.ativo %}
+                  <a class="spaces-button spaces-button--danger" href="{{ url_for('espaco.desativar_espaco', id=e.id) }}">
+                    Desativar
+                  </a>
+                  {% else %}
+                  <a class="spaces-button spaces-button--success" href="{{ url_for('espaco.ativar_espaco', id=e.id) }}">
+                    Ativar
+                  </a>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

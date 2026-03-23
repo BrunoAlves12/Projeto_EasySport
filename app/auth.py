@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for,flash, session
-from app.models import User
+from app.models import EstadoUser, User
 from app.extensions import db
 import re
 from datetime import datetime, date
@@ -111,6 +111,10 @@ def login():
     if not user or user.password != password:
         flash("Credenciais inválidas")
         return redirect(url_for("auth.login_page"))
+    
+    if user.estado == EstadoUser.inativo:
+        flash("A conta está inativa. Contacte o administrador.")
+        return redirect(url_for("auth.login_page"))
 
     session["user_id"] = user.id
     session["username"] = user.username
@@ -118,7 +122,11 @@ def login():
 
     flash("Login efetuado com sucesso")
 
-    return redirect(url_for("main.espacos_homepage"))
+    if user.isAdmin:
+        return redirect(url_for("main.admin_dashboard"))
+    else:
+        return redirect(url_for("main.espacos_homepage"))
+
 @auth_bp.route("/logout")
 def logout():
 

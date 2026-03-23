@@ -1,8 +1,52 @@
-from flask import Blueprint, request, redirect, url_for, flash, session, render_template
+import os
+import uuid
+
+from flask import Blueprint, current_app, request, redirect, url_for, flash, session, render_template
 from app.models import Espaco
 from app.extensions import db
+from werkzeug.utils import secure_filename
 
 espaco_bp = Blueprint("espaco", __name__)
+
+EXTENSOES_IMAGEM_PERMITIDAS = {"png", "jpg", "jpeg", "gif", "webp"}
+
+
+def _guardar_imagem_espaco(imagem_file):
+    if not imagem_file or not imagem_file.filename:
+        return current_app.config["ESPACO_IMAGEM_DEFAULT"]
+
+    nome_seguro = secure_filename(imagem_file.filename)
+    extensao = nome_seguro.rsplit(".", 1)[-1].lower() if "." in nome_seguro else ""
+
+    if extensao not in EXTENSOES_IMAGEM_PERMITIDAS:
+        return None
+
+    nome_unico = f"{uuid.uuid4().hex}.{extensao}"
+    pasta_upload = current_app.config["ESPACOS_IMG_UPLOAD_FOLDER"]
+    caminho_ficheiro = os.path.join(pasta_upload, nome_unico)
+
+    imagem_file.save(caminho_ficheiro)
+    return f"img/espacos/{nome_unico}"
+
+
+def _obter_imagem_para_espaco(imagem_file, imagem_atual=None):
+    if not imagem_file or not imagem_file.filename:
+        if imagem_atual:
+            return imagem_atual
+
+        return current_app.config["ESPACO_IMAGEM_DEFAULT"]
+
+    return _guardar_imagem_espaco(imagem_file)
+
+
+def _resolver_imagem_listagem(espaco):
+    imagem = espaco.imagem or current_app.config["ESPACO_IMAGEM_DEFAULT"]
+    caminho_imagem = os.path.join(current_app.static_folder, imagem.replace("/", os.sep))
+
+    if not os.path.exists(caminho_imagem):
+        return current_app.config["ESPACO_IMAGEM_DEFAULT"]
+
+    return imagem
 
 
 @espaco_bp.route("/espaco", methods=["POST"])
@@ -10,7 +54,8 @@ def criar_espaco():
 
     nome = request.form["nome"]
     descricao = request.form["descricao"]
-    preco_str = float(request.form["preco"])
+    preco_str = request.form["preco"]
+    imagem_file = request.files.get("imagem")
 
     try:
         preco = float(preco_str)
@@ -31,9 +76,15 @@ def criar_espaco():
         flash("Acesso restrito ao admin")
         return redirect(url_for("main.index"))
 
+    imagem = _obter_imagem_para_espaco(imagem_file)
+    if imagem_file and imagem is None:
+        flash("Formato de imagem inválido")
+        return redirect(url_for("main.espaco_page"))
+
     espaco = Espaco(
         nome=nome, 
         descricao=descricao, 
+        imagem=imagem,
         precoHora=preco,
         ativo=True
     )
@@ -43,7 +94,7 @@ def criar_espaco():
 
     flash("Espaço criado com sucesso!")
 
-    return redirect(url_for("main.index"))
+    return redirect(url_for("espaco.listar_espacos"))
 
 
 @espaco_bp.route("/espaco", methods=["GET"])
@@ -54,7 +105,13 @@ def listar_espacos():
     else:
         espacos = Espaco.query.filter_by(ativo=True).all()
 
-    return render_template("listar_espacos.html", espacos=espacos)
+    for espaco in espacos:
+        espaco.imagem_listagem = _resolver_imagem_listagem(espaco)
+
+    return render_template(
+        "listar_espacos.html",
+        espacos=espacos
+    )
 
 @espaco_bp.route("/editar-espaco/<int:id>", methods=["GET", "POST"])
 def editar_espaco(id):
@@ -73,6 +130,7 @@ def editar_espaco(id):
         nome = request.form["nome"]
         descricao = request.form["descricao"]
         preco_str = request.form["preco"]
+        imagem_file = request.files.get("imagem")
 
         if not nome:
             flash("Nome do espaço é obrigatório")
@@ -88,14 +146,21 @@ def editar_espaco(id):
             flash("Preço inválido")
             return redirect(url_for("espaco.editar_espaco", id=id))
 
+        imagem = _obter_imagem_para_espaco(imagem_file, espaco.imagem)
+        if imagem_file and imagem is None:
+            flash("Formato de imagem inválido")
+            return redirect(url_for("espaco.editar_espaco", id=id))
+
         espaco.nome = nome
         espaco.descricao = descricao
+        espaco.imagem = imagem
         espaco.precoHora = preco
 
         db.session.commit()
         flash("Espaço editado com sucesso")
         return redirect(url_for("espaco.listar_espacos"))
 
+    espaco.imagem_listagem = _resolver_imagem_listagem(espaco)
     return render_template("editar_espaco.html", espaco=espaco)
 
 

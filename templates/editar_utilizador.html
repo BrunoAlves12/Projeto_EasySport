@@ -18,7 +18,7 @@ messages %}
   </select><br><br>
 
   <button type="submit">Guardar alterações</button>
-  <a href="{{ url_for('main.listar_utilizadores') }}">
-    <button type="button">Cancelar</button>
-  </a>
+    <a href="{% if session.get('is_admin') %}{{ url_for('main.listar_utilizadores') }}{% else %}{{ url_for('main.index') }}{% endif %}">
+      <button type="button">Cancelar</button>
+    </a>
 </form>

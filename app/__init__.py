@@ -1,8 +1,10 @@
+import os
+
 from flask import Flask
+
 from .extensions import db
 from .espaco import espaco_bp
 from .routes import main_bp
-import os
 
 def create_app():
     app = Flask(
@@ -14,8 +16,11 @@ def create_app():
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///easycourt.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["ESPACO_IMAGEM_DEFAULT"] = "img/easysport-logo.png"
+    app.config["ESPACOS_IMG_UPLOAD_FOLDER"] = os.path.join(app.static_folder, "img", "espacos")
 
     db.init_app(app)
+    os.makedirs(app.config["ESPACOS_IMG_UPLOAD_FOLDER"], exist_ok=True)
 
     from .auth import auth_bp
     from .reservas import reservas_bp
