@@ -16,6 +16,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/espacos.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/index.css') }}"
+    />
   </head>
 
   <body class="admin-page spaces-page">
@@ -35,9 +39,9 @@
 
         <div class="spaces-header__actions">
           {% if session.get("is_admin") %}
-          <a class="spaces-button spaces-button--primary" href="{{ url_for('main.espaco_page') }}">
-            Adicionar espaço
-          </a>
+            <a class="spaces-button spaces-button--primary" href="{{ url_for('main.espaco_page') }}">
+              Adicionar espaço
+            </a>
           {% endif %}
 
           <a class="spaces-button spaces-button--secondary" href="{% if session.get('is_admin') %}{{ url_for('main.admin_dashboard') }}{% else %}{{ url_for('main.index') }}{% endif %}">
@@ -65,51 +69,76 @@
             </div>
           </div>
 
-          <div class="spaces-grid">
+          <div class="{% if session.get('is_admin') %}spaces-grid{% else %}home-space-grid spaces-grid--user{% endif %}">
             {% for e in espacos %}
-            <article class="spaces-card">
-              <div class="spaces-card__image-wrap">
-                <img
-                  class="spaces-card__image"
-                  src="{{ url_for('static', filename=e.imagem_listagem) }}"
-                  alt="{{ e.nome }}"
-                />
-                <span class="spaces-status {% if e.ativo %}spaces-status--active{% else %}spaces-status--inactive{% endif %}">
-                  {% if e.ativo %}Ativo{% else %}Inativo{% endif %}
-                </span>
-              </div>
-
-              <div class="spaces-card__content">
-                <div class="spaces-card__top">
-                  <div>
-                    <h4>{{ e.nome }}</h4>
+              {% if session.get("is_admin") %}
+                <article class="spaces-card">
+                  <div class="spaces-card__image-wrap">
+                    <img
+                      class="spaces-card__image"
+                      src="{{ url_for('static', filename=e.imagem_listagem) }}"
+                      alt="{{ e.nome }}"
+                    />
+                    <span class="spaces-status {% if e.ativo %}spaces-status--active{% else %}spaces-status--inactive{% endif %}">
+                      {% if e.ativo %}Ativo{% else %}Inativo{% endif %}
+                    </span>
                   </div>
-                  <strong class="spaces-card__price">{{ "%.2f"|format(e.precoHora) }}€/hora</strong>
-                </div>
 
-                <p class="spaces-card__description">
-                  {{ e.descricao or "Sem descrição disponível." }}
-                </p>
+                  <div class="spaces-card__content">
+                    <div class="spaces-card__top">
+                      <div class="spaces-card__meta">
+                        <span class="spaces-card__sport">{{ e.modalidade_listagem }}</span>
+                        <strong class="spaces-card__price">{{ "%.2f"|format(e.precoHora) }}€/hora</strong>
+                      </div>
+                      <h4>{{ e.nome }}</h4>
+                    </div>
 
-                {% if session.get("is_admin") %}
-                <div class="spaces-card__actions">
-                  <a class="spaces-button spaces-button--secondary" href="{{ url_for('espaco.editar_espaco', id=e.id) }}">
-                    Editar
-                  </a>
+                    <p class="spaces-card__description">
+                      {{ e.descricao or "Sem descrição disponível." }}
+                    </p>
 
-                  {% if e.ativo %}
-                  <a class="spaces-button spaces-button--danger" href="{{ url_for('espaco.desativar_espaco', id=e.id) }}">
-                    Desativar
-                  </a>
-                  {% else %}
-                  <a class="spaces-button spaces-button--success" href="{{ url_for('espaco.ativar_espaco', id=e.id) }}">
-                    Ativar
-                  </a>
-                  {% endif %}
-                </div>
-                {% endif %}
-              </div>
-            </article>
+                    <div class="spaces-card__actions">
+                      <a class="spaces-button spaces-button--secondary" href="{{ url_for('espaco.editar_espaco', id=e.id) }}">
+                        Editar
+                      </a>
+
+                      {% if e.ativo %}
+                        <a class="spaces-button spaces-button--danger" href="{{ url_for('espaco.desativar_espaco', id=e.id) }}">
+                          Desativar
+                        </a>
+                      {% else %}
+                        <a class="spaces-button spaces-button--success" href="{{ url_for('espaco.ativar_espaco', id=e.id) }}">
+                          Ativar
+                        </a>
+                      {% endif %}
+                    </div>
+                  </div>
+                </article>
+              {% else %}
+                <a class="home-space-card" href="{{ url_for('reservas.reservar_page', espaco_id=e.id) }}">
+                  <img
+                    class="home-space-card__image"
+                    src="{{ url_for('static', filename=e.imagem_listagem) }}"
+                    alt="{{ e.nome }}"
+                  />
+                  <div class="home-space-card__content">
+                    <div class="home-space-card__top">
+                      <span class="home-space-card__sport">{{ e.modalidade_listagem }}</span>
+                      <span class="home-space-card__status {% if e.ativo %}is-available{% else %}is-unavailable{% endif %}">
+                        {% if e.ativo %}Disponível{% else %}Indisponível{% endif %}
+                      </span>
+                    </div>
+
+                    <strong>{{ e.nome }}</strong>
+                    <p class="home-space-card__description">{{ e.descricao or "Sem descrição disponível." }}</p>
+
+                    <div class="home-space-card__bottom">
+                      <span class="home-space-card__price">{{ "%.2f"|format(e.precoHora) }}€/hora</span>
+                      <span class="home-space-card__link">Reservar</span>
+                    </div>
+                  </div>
+                </a>
+              {% endif %}
             {% endfor %}
           </div>
         </section>

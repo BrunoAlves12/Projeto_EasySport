@@ -87,7 +87,7 @@
           <section class="home-hero">
             <p class="home-hero__eyebrow">Espaços em destaque</p>
             <h2>Encontra o espaço ideal para a tua próxima reserva.</h2>
-            <p class="home-hero__text">Seleciona um espaço para continuar.</p>
+            <p class="home-hero__text">Seleciona um espaço real da plataforma e avança diretamente para a reserva.</p>
           </section>
 
           {% if ns.other_messages %}
@@ -102,26 +102,27 @@
             {% for espaco in espacos_destaque %}
               <a
                 class="home-space-card"
-                href="{% if session.get('user_id') %}{{ url_for('main.listar_espacos_page') }}{% else %}{{ url_for('auth.login_page') }}{% endif %}"
+                href="{% if session.get('user_id') %}{{ url_for('reservas.reservar_page', espaco_id=espaco.id) }}{% else %}{{ url_for('auth.login_page') }}{% endif %}"
               >
                 <img
                   class="home-space-card__image"
-                  src="{{ url_for('static', filename=espaco.imagem) }}"
+                  src="{{ url_for('static', filename=espaco.imagem_homepage) }}"
                   alt="{{ espaco.nome }}"
                 />
                 <div class="home-space-card__content">
                   <div class="home-space-card__top">
-                    <span class="home-space-card__sport">{{ espaco.modalidade }}</span>
+                    <span class="home-space-card__sport">{{ espaco.modalidade_homepage }}</span>
                     <span class="home-space-card__status {% if espaco.ativo %}is-available{% else %}is-unavailable{% endif %}">
                       {% if espaco.ativo %}Disponível{% else %}Indisponível{% endif %}
                     </span>
                   </div>
 
                   <strong>{{ espaco.nome }}</strong>
+                  <p class="home-space-card__description">{{ espaco.descricao_curta }}</p>
 
                   <div class="home-space-card__bottom">
                     <span class="home-space-card__price">{{ "%.2f"|format(espaco.precoHora) }}€/hora</span>
-                    <span class="home-space-card__link">Ver espaço</span>
+                    <span class="home-space-card__link">Reservar</span>
                   </div>
                 </div>
               </a>

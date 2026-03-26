@@ -40,6 +40,7 @@ class Espaco(db.Model):
 
 	id = db.Column(db.Integer, primary_key=True)
 	nome = db.Column(db.String(30), nullable = False)
+	modalidade = db.Column(db.String(40))
 	descricao = db.Column(db.Text)
 	imagem = db.Column(db.String(200))
 	precoHora = db.Column(db.Float, nullable = False)

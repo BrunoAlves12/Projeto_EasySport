@@ -391,6 +391,16 @@ body.home-page {
   line-height: 1.3;
 }
 
+.home-space-card__description {
+  margin: -4px 0 0;
+  color: var(--auth-muted);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .home-space-card__bottom {
   margin-top: auto;
   padding-top: 6px;

@@ -2,9 +2,10 @@ import os
 import uuid
 
 from flask import Blueprint, current_app, request, redirect, url_for, flash, session, render_template
+from werkzeug.utils import secure_filename
+
 from app.models import Espaco
 from app.extensions import db
-from werkzeug.utils import secure_filename
 
 espaco_bp = Blueprint("espaco", __name__)
 
@@ -51,27 +52,30 @@ def _resolver_imagem_listagem(espaco):
 
 @espaco_bp.route("/espaco", methods=["POST"])
 def criar_espaco():
-
     nome = request.form["nome"]
+    modalidade = request.form["modalidade"]
     descricao = request.form["descricao"]
     preco_str = request.form["preco"]
     imagem_file = request.files.get("imagem")
 
     try:
         preco = float(preco_str)
-    except:
+    except Exception:
         flash("Preço inválido")
         return redirect(url_for("main.espaco_page"))
 
-    # validações
     if not nome:
         flash("Nome do espaço é obrigatório")
         return redirect(url_for("main.espaco_page"))
 
-    if preco <= 0:
-        flash("Preço Inválido!")
+    if not modalidade:
+        flash("Modalidade é obrigatória")
         return redirect(url_for("main.espaco_page"))
-    
+
+    if preco <= 0:
+        flash("Preço inválido")
+        return redirect(url_for("main.espaco_page"))
+
     if not session.get("is_admin"):
         flash("Acesso restrito ao admin")
         return redirect(url_for("main.index"))
@@ -82,8 +86,9 @@ def criar_espaco():
         return redirect(url_for("main.espaco_page"))
 
     espaco = Espaco(
-        nome=nome, 
-        descricao=descricao, 
+        nome=nome,
+        modalidade=modalidade,
+        descricao=descricao,
         imagem=imagem,
         precoHora=preco,
         ativo=True
@@ -99,7 +104,6 @@ def criar_espaco():
 
 @espaco_bp.route("/espaco", methods=["GET"])
 def listar_espacos():
-    
     if session.get("is_admin"):
         espacos = Espaco.query.all()
     else:
@@ -107,15 +111,16 @@ def listar_espacos():
 
     for espaco in espacos:
         espaco.imagem_listagem = _resolver_imagem_listagem(espaco)
+        espaco.modalidade_listagem = (espaco.modalidade or "Espaço desportivo").strip()
 
     return render_template(
         "listar_espacos.html",
         espacos=espacos
     )
 
+
 @espaco_bp.route("/editar-espaco/<int:id>", methods=["GET", "POST"])
 def editar_espaco(id):
-
     if not session.get("is_admin"):
         flash("Acesso restrito ao admin")
         return redirect(url_for("main.index"))
@@ -128,6 +133,7 @@ def editar_espaco(id):
 
     if request.method == "POST":
         nome = request.form["nome"]
+        modalidade = request.form["modalidade"]
         descricao = request.form["descricao"]
         preco_str = request.form["preco"]
         imagem_file = request.files.get("imagem")
@@ -136,9 +142,13 @@ def editar_espaco(id):
             flash("Nome do espaço é obrigatório")
             return redirect(url_for("espaco.editar_espaco", id=id))
 
+        if not modalidade:
+            flash("Modalidade é obrigatória")
+            return redirect(url_for("espaco.editar_espaco", id=id))
+
         try:
             preco = float(preco_str)
-        except:
+        except Exception:
             flash("Preço inválido")
             return redirect(url_for("espaco.editar_espaco", id=id))
 
@@ -152,6 +162,7 @@ def editar_espaco(id):
             return redirect(url_for("espaco.editar_espaco", id=id))
 
         espaco.nome = nome
+        espaco.modalidade = modalidade
         espaco.descricao = descricao
         espaco.imagem = imagem
         espaco.precoHora = preco
@@ -166,7 +177,6 @@ def editar_espaco(id):
 
 @espaco_bp.route("/desativar-espaco/<int:id>")
 def desativar_espaco(id):
-
     if not session.get("is_admin"):
         flash("Acesso restrito ao admin")
         return redirect(url_for("main.index"))
@@ -186,7 +196,6 @@ def desativar_espaco(id):
 
 @espaco_bp.route("/ativar-espaco/<int:id>")
 def ativar_espaco(id):
-
     if not session.get("is_admin"):
         flash("Acesso restrito ao admin")
         return redirect(url_for("main.index"))

@@ -1,7 +1,6 @@
 import os
-
 from flask import Flask
-
+from sqlalchemy import inspect, text
 from .extensions import db
 from .espaco import espaco_bp
 from .routes import main_bp

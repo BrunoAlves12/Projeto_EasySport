@@ -1,39 +1,576 @@
-<h1>Criar Reserva</h1>
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reservar | EasySport</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reservar.css') }}" />
+  </head>
+  <body class="reserve-page">
+    <div
+      class="reserve-shell"
+      data-calendar-year="{{ calendario_inicial.ano }}"
+      data-calendar-month="{{ calendario_inicial.mes }}"
+      data-min-date="{{ data_minima }}"
+    >
+      <header class="reserve-header">
+        <a class="reserve-brand" href="{{ url_for('main.index') }}">
+          <img
+            class="reserve-brand__logo"
+            src="{{ url_for('static', filename='img/easysport-logo.png') }}"
+            alt="Logo EasySport"
+          />
+          <div>
+            <p class="reserve-brand__eyebrow">Reserva</p>
+            <h1>EasySport</h1>
+          </div>
+        </a>  
 
-<a href="/">Voltar ao Início</a>
+        <details class="reserve-profile-menu">
+          <summary class="reserve-profile-button">
+            <span class="reserve-profile-avatar" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M12 12a4.25 4.25 0 1 0-4.25-4.25A4.25 4.25 0 0 0 12 12Zm0 2.25c-4.23 0-7.75 2.16-7.75 4.75a1 1 0 0 0 1 1h13.5a1 1 0 0 0 1-1c0-2.59-3.52-4.75-7.75-4.75Z" />
+              </svg>
+            </span>
+            <span class="reserve-profile-content">
+              <span class="reserve-profile-label">A minha conta</span>
+              <strong>{{ session["username"] }}</strong>
+            </span>
+            <span class="reserve-profile-chevron" aria-hidden="true">
+              <svg viewBox="0 0 20 20" focusable="false">
+                <path d="m5.25 7.5 4.75 5 4.75-5" />
+              </svg>
+            </span>
+          </summary>
 
-<br /><br />
+          <div class="reserve-profile-dropdown">
+            <a class="reserve-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Ver espaços</a>
+            <a class="reserve-profile-link" href="{{ url_for('reservas.minha_reservas') }}">Consultar reservas</a>
+            <a class="reserve-profile-link" href="{{ url_for('main.perfil_utilizador') }}">Perfil</a>
+            <a class="reserve-profile-link reserve-profile-link--logout" href="{{ url_for('auth.logout') }}">Logout</a>
+          </div>
+        </details>
+      </header>
 
-{% with messages = get_flashed_messages() %}
-  {% if messages %} 
-    {% for message in messages %}
-      <p style="color: red">{{ message }}</p>
-    {% endfor %} 
-  {% endif %} 
-{% endwith %}
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="reserve-messages">
+            {% for message in messages %}
+              <p class="reserve-alert">{{ message }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
 
+      <main class="reserve-main">
+        <div class="reserve-layout">
+          <section class="reserve-card reserve-form-card">
+            <div class="reserve-section-heading">
+              <p class="reserve-section-heading__eyebrow">Passo a passo</p>
+              <h3>Completa a tua reserva</h3>
+            </div>
 
-<form action="/reservar" method="post">
-  <label>Espaço</label>
-  <select name="espaco_id">
-    {% for espaco in espacos %}
-    <option value="{{ espaco.id }}">
-      {{ espaco.nome }} - {{ espaco.precoHora }}€/hora
-    </option>
-    {% endfor %}
-  </select>
+            <form class="reserve-form" method="post" action="{{ url_for('reservas.criar_reserva') }}">
+              <div class="reserve-field">
+                <label for="espaco_id">Espaço</label>
+                {% if selected_espaco %}
+                  <input type="hidden" id="espaco_id" name="espaco_id" value="{{ selected_espaco.id }}" />
+                  <div
+                    class="reserve-selected-space"
+                    data-space-name="{{ selected_espaco.nome }}"
+                    data-space-price="{{ '%.2f'|format(selected_espaco.precoHora) }}"
+                    data-space-mode="{{ selected_espaco.modalidade or 'Espaço desportivo' }}"
+                  >
+                    <div>
+                      <strong>{{ selected_espaco.nome }}</strong>
+                      <p>{{ selected_espaco.modalidade or "Espaço desportivo" }}</p>
+                    </div>
+                    <span>{{ "%.2f"|format(selected_espaco.precoHora) }}€/hora</span>
+                  </div>
+                {% else %}
+                  <select id="espaco_id" name="espaco_id" class="reserve-select" required>
+                    <option value="">Seleciona um espaço</option>
+                    {% for espaco in espacos %}
+                      <option
+                        value="{{ espaco.id }}"
+                        data-space-name="{{ espaco.nome }}"
+                        data-space-price="{{ '%.2f'|format(espaco.precoHora) }}"
+                        data-space-mode="{{ espaco.modalidade or 'Espaço desportivo' }}"
+                      >
+                        {{ espaco.nome }} - {{ "%.2f"|format(espaco.precoHora) }}€/hora
+                      </option>
+                    {% endfor %}
+                  </select>
+                {% endif %}
+              </div>
 
-  <br /><br />
+              <div class="reserve-grid">
+                <section class="reserve-step reserve-step--calendar">
+                  <div class="reserve-step__header">
+                    <div>
+                      <span class="reserve-step__number">1</span>
+                      <h4>Escolhe o dia</h4>
+                    </div>
+                    <p id="calendar-status" class="reserve-step__status">Seleciona um espaço para carregar o calendário.</p>
+                  </div>
 
-  <label>Início</label>
-  <input type="datetime-local" name="inicio" required />
+                  <div class="reserve-calendar">
+                    <div class="reserve-calendar__header">
+                      <button id="calendar-prev" class="reserve-icon-button" type="button" aria-label="Mês anterior">
+                        &lsaquo;
+                      </button>
+                      <strong id="calendar-month-label">--</strong>
+                      <button id="calendar-next" class="reserve-icon-button" type="button" aria-label="Mês seguinte">
+                        &rsaquo;
+                      </button>
+                    </div>
 
-  <br /><br />
+                    <div class="reserve-calendar__weekdays">
+                      <span>Dom</span>
+                      <span>Seg</span>
+                      <span>Ter</span>
+                      <span>Qua</span>
+                      <span>Qui</span>
+                      <span>Sex</span>
+                      <span>Sáb</span>
+                    </div>
 
-  <label>Fim</label>
-  <input type="datetime-local" name="fim" required />
+                    <div id="calendar-grid" class="reserve-calendar__grid" aria-live="polite"></div>
+                  </div>
 
-  <br /><br />
+                  <div class="reserve-legend">
+                    <span class="reserve-legend__item"><i class="is-free"></i>Livre</span>
+                    <span class="reserve-legend__item"><i class="is-partial"></i>Parcial</span>
+                    <span class="reserve-legend__item"><i class="is-full"></i>Completo</span>
+                  </div>
+                </section>
 
-  <button type="submit">Criar Reserva</button>
-</form>
+                <section class="reserve-step">
+                  <div class="reserve-step__header">
+                    <div>
+                      <span class="reserve-step__number">2</span>
+                      <h4>Escolhe a hora de início</h4>
+                    </div>
+                    <p id="starts-status" class="reserve-step__status">Seleciona primeiro um dia disponível.</p>
+                  </div>
+
+                  <div id="starts-container" class="reserve-options" aria-live="polite">
+                    <p class="reserve-options__placeholder">Ainda não existem horas para mostrar.</p>
+                  </div>
+                </section>
+
+                <section class="reserve-step">
+                  <div class="reserve-step__header">
+                    <div>
+                      <span class="reserve-step__number">3</span>
+                      <h4>Escolhe a duração</h4>
+                    </div>
+                    <p id="durations-status" class="reserve-step__status">Escolhe uma hora de início para filtrar as durações possíveis.</p>
+                  </div>
+
+                  <div id="durations-container" class="reserve-options" aria-live="polite">
+                    <p class="reserve-options__placeholder">As durações válidas aparecem aqui.</p>
+                  </div>
+                </section>
+              </div>
+
+              <input type="hidden" id="inicio" name="inicio" />
+              <input type="hidden" id="fim" name="fim" />
+
+              <div class="reserve-actions">
+                <button id="submit-button" class="reserve-button reserve-button--primary" type="submit" disabled>
+                  Confirmar reserva
+                </button>
+                <a class="reserve-button reserve-button--ghost" href="{{ url_for('main.listar_espacos_page') }}">
+                  Voltar
+                </a>
+              </div>
+            </form>
+          </section>
+
+          <aside class="reserve-card reserve-summary">
+            <div class="reserve-section-heading">
+              <p class="reserve-section-heading__eyebrow">Resumo</p>
+              <h3>A tua reserva</h3>
+            </div>
+
+            <dl class="reserve-summary__list">
+              <div>
+                <dt>Espaço</dt>
+                <dd id="summary-space">{{ selected_espaco.nome if selected_espaco else "Por selecionar" }}</dd>
+              </div>
+              <div>
+                <dt>Modalidade</dt>
+                <dd id="summary-mode">{{ selected_espaco.modalidade if selected_espaco and selected_espaco.modalidade else "Por selecionar" }}</dd>
+              </div>
+              <div>
+                <dt>Data</dt>
+                <dd id="summary-date">Por selecionar</dd>
+              </div>
+              <div>
+                <dt>Hora de início</dt>
+                <dd id="summary-start">Por selecionar</dd>
+              </div>
+              <div>
+                <dt>Hora de fim</dt>
+                <dd id="summary-end">Por selecionar</dd>
+              </div>
+              <div>
+                <dt>Preço por hora</dt>
+                <dd id="summary-price">
+                  {% if selected_espaco %}
+                    {{ "%.2f"|format(selected_espaco.precoHora) }}€
+                  {% else %}
+                    --
+                  {% endif %}
+                </dd>
+              </div>
+              <div>
+                <dt>Duração</dt>
+                <dd id="summary-duration">Por selecionar</dd>
+              </div>
+              <div class="reserve-summary__total">
+                <dt>Total</dt>
+                <dd id="summary-total">--</dd>
+              </div>
+            </dl>
+
+            <div class="reserve-summary__card">
+              <strong>Horário do espaço</strong>
+              <p id="summary-hours">{{ configuracao_reserva.abertura }} - {{ configuracao_reserva.fecho }}</p>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const reserveShell = document.querySelector(".reserve-shell");
+      const fixedSelectedSpace = document.querySelector(".reserve-selected-space");
+      const spaceSelect = document.getElementById("espaco_id");
+      const calendarPrevButton = document.getElementById("calendar-prev");
+      const calendarNextButton = document.getElementById("calendar-next");
+      const calendarMonthLabel = document.getElementById("calendar-month-label");
+      const calendarGrid = document.getElementById("calendar-grid");
+      const calendarStatus = document.getElementById("calendar-status");
+      const startsStatus = document.getElementById("starts-status");
+      const durationsStatus = document.getElementById("durations-status");
+      const startsContainer = document.getElementById("starts-container");
+      const durationsContainer = document.getElementById("durations-container");
+      const startInput = document.getElementById("inicio");
+      const endInput = document.getElementById("fim");
+      const submitButton = document.getElementById("submit-button");
+
+      const summarySpace = document.getElementById("summary-space");
+      const summaryMode = document.getElementById("summary-mode");
+      const summaryDate = document.getElementById("summary-date");
+      const summaryStart = document.getElementById("summary-start");
+      const summaryEnd = document.getElementById("summary-end");
+      const summaryPrice = document.getElementById("summary-price");
+      const summaryDuration = document.getElementById("summary-duration");
+      const summaryTotal = document.getElementById("summary-total");
+      const summaryHours = document.getElementById("summary-hours");
+
+      const initialCalendar = {
+        ano: Number(reserveShell.dataset.calendarYear),
+        mes: Number(reserveShell.dataset.calendarMonth),
+      };
+      const today = new Date(`${reserveShell.dataset.minDate}T00:00:00`);
+
+      let currentYear = initialCalendar.ano;
+      let currentMonth = initialCalendar.mes;
+      let selectedDate = null;
+      let selectedStart = null;
+      let selectedDuration = null;
+
+      function getSelectedSpaceData() {
+        if (fixedSelectedSpace) {
+          return {
+            id: document.getElementById("espaco_id").value,
+            name: fixedSelectedSpace.dataset.spaceName,
+            mode: fixedSelectedSpace.dataset.spaceMode,
+            price: fixedSelectedSpace.dataset.spacePrice,
+          };
+        }
+
+        if (!spaceSelect || !spaceSelect.value) {
+          return null;
+        }
+
+        const option = spaceSelect.options[spaceSelect.selectedIndex];
+        return {
+          id: option.value,
+          name: option.dataset.spaceName,
+          mode: option.dataset.spaceMode,
+          price: option.dataset.spacePrice,
+        };
+      }
+
+      function formatCurrency(value) {
+        if (!value) {
+          return "--";
+        }
+
+        return `${Number(value).toFixed(2)}€`;
+      }
+
+      function formatDate(dateValue) {
+        if (!dateValue) {
+          return "Por selecionar";
+        }
+
+        const [year, month, day] = dateValue.split("-");
+        return `${day}/${month}/${year}`;
+      }
+
+      function renderPlaceholder(container, message) {
+        container.innerHTML = `<p class="reserve-options__placeholder">${message}</p>`;
+      }
+
+      function resetSelectionFromDate() {
+        selectedStart = null;
+        selectedDuration = null;
+        startInput.value = "";
+        endInput.value = "";
+        summaryStart.textContent = "Por selecionar";
+        summaryEnd.textContent = "Por selecionar";
+        summaryDuration.textContent = "Por selecionar";
+        summaryTotal.textContent = "--";
+        startsStatus.textContent = "Seleciona primeiro um dia disponível.";
+        durationsStatus.textContent = "Escolhe uma hora de início para filtrar as durações possíveis.";
+        renderPlaceholder(startsContainer, "Ainda não existem horas para mostrar.");
+        renderPlaceholder(durationsContainer, "As durações válidas aparecem aqui.");
+        updateSubmitState();
+      }
+
+      function updateSummarySpace() {
+        const selectedSpace = getSelectedSpaceData();
+        summarySpace.textContent = selectedSpace ? selectedSpace.name : "Por selecionar";
+        summaryMode.textContent = selectedSpace ? selectedSpace.mode : "Por selecionar";
+        summaryPrice.textContent = selectedSpace ? formatCurrency(selectedSpace.price) : "--";
+      }
+
+      function updateSubmitState() {
+        submitButton.disabled = !(getSelectedSpaceData() && startInput.value && endInput.value);
+      }
+
+      function isPastMonth(year, month) {
+        const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const targetMonthStart = new Date(year, month - 1, 1);
+        return targetMonthStart < currentMonthStart;
+      }
+
+      function updateMonthNavigation() {
+        const previousYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+        const previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+        calendarPrevButton.disabled = isPastMonth(previousYear, previousMonth);
+      }
+
+      function resetAllSelections() {
+        selectedDate = null;
+        summaryDate.textContent = "Por selecionar";
+        resetSelectionFromDate();
+      }
+
+      function renderCalendarDays(payload) {
+        calendarMonthLabel.textContent = `${payload.nome_mes} ${payload.ano}`;
+        calendarGrid.innerHTML = "";
+
+        for (let index = 0; index < payload.primeiro_dia_semana; index += 1) {
+          const emptyCell = document.createElement("span");
+          emptyCell.className = "reserve-calendar__empty";
+          calendarGrid.appendChild(emptyCell);
+        }
+
+        payload.dias.forEach((day) => {
+          const button = document.createElement("button");
+          const isSelected = selectedDate === day.data;
+          const isDisabled = day.estado === "indisponivel";
+
+          button.type = "button";
+          button.className = `reserve-day reserve-day--${day.estado}${isSelected ? " is-selected" : ""}`;
+          button.disabled = isDisabled;
+          button.innerHTML = `<strong>${day.dia}</strong>`;
+
+          if (!isDisabled) {
+            button.addEventListener("click", () => {
+              selectedDate = day.data;
+              summaryDate.textContent = formatDate(day.data);
+              resetSelectionFromDate();
+              loadDayAvailability();
+              renderCalendarDays(payload);
+            });
+          }
+
+          calendarGrid.appendChild(button);
+        });
+      }
+
+      async function loadMonthCalendar() {
+        const selectedSpace = getSelectedSpaceData();
+        resetAllSelections();
+
+        if (!selectedSpace) {
+          calendarMonthLabel.textContent = "--";
+          calendarGrid.innerHTML = "";
+          calendarStatus.textContent = "Seleciona um espaço para carregar o calendário.";
+          return;
+        }
+
+        calendarStatus.textContent = "A carregar disponibilidade do mês...";
+
+        try {
+          const response = await fetch(`/api/espacos/${selectedSpace.id}/calendario-mensal?ano=${currentYear}&mes=${currentMonth}`);
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.erro || "Não foi possível carregar o calendário.");
+          }
+
+          summaryHours.textContent = `${payload.espaco.horario_funcionamento.abertura} - ${payload.espaco.horario_funcionamento.fecho}`;
+          calendarStatus.textContent = "Escolhe um dia livre ou parcialmente ocupado.";
+          renderCalendarDays(payload);
+          updateMonthNavigation();
+        } catch (error) {
+          calendarGrid.innerHTML = "";
+          calendarMonthLabel.textContent = "--";
+          calendarStatus.textContent = error.message;
+        }
+      }
+
+      function renderStartTimes(inicios) {
+        if (!inicios.length) {
+          renderPlaceholder(startsContainer, "Não existem horas de início disponíveis neste dia.");
+          return;
+        }
+
+        startsContainer.innerHTML = "";
+
+        inicios.forEach((inicio) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `reserve-option-button${selectedStart && selectedStart.inicio === inicio.inicio ? " is-selected" : ""}`;
+          button.textContent = inicio.label;
+          button.addEventListener("click", () => {
+            selectedStart = inicio;
+            selectedDuration = null;
+            startInput.value = "";
+            endInput.value = "";
+            summaryStart.textContent = inicio.hora_inicio;
+            summaryEnd.textContent = "Por selecionar";
+            summaryDuration.textContent = "Por selecionar";
+            summaryTotal.textContent = "--";
+            durationsStatus.textContent = `${inicio.duracoes.length} duração(ões) possível(eis) a partir das ${inicio.hora_inicio}.`;
+            renderStartTimes(inicios);
+            renderDurations(inicio.duracoes);
+            updateSubmitState();
+          });
+
+          startsContainer.appendChild(button);
+        });
+      }
+
+      function renderDurations(duracoes) {
+        if (!duracoes.length) {
+          renderPlaceholder(durationsContainer, "Não existem durações válidas para esta hora.");
+          return;
+        }
+
+        durationsContainer.innerHTML = "";
+
+        duracoes.forEach((duracao) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `reserve-option-button${selectedDuration && selectedDuration.horas === duracao.horas ? " is-selected" : ""}`;
+          button.innerHTML = `<strong>${duracao.label}</strong><small>até ${duracao.hora_fim}</small>`;
+          button.addEventListener("click", () => {
+            const selectedSpace = getSelectedSpaceData();
+            selectedDuration = duracao;
+            startInput.value = selectedStart.inicio;
+            endInput.value = duracao.fim;
+            summaryStart.textContent = selectedStart.hora_inicio;
+            summaryEnd.textContent = duracao.hora_fim;
+            summaryDuration.textContent = duracao.label;
+            summaryTotal.textContent = selectedSpace ? formatCurrency(Number(selectedSpace.price) * duracao.horas) : "--";
+            renderDurations(duracoes);
+            updateSubmitState();
+          });
+
+          durationsContainer.appendChild(button);
+        });
+      }
+
+      async function loadDayAvailability() {
+        const selectedSpace = getSelectedSpaceData();
+
+        if (!selectedSpace || !selectedDate) {
+          return;
+        }
+
+        startsStatus.textContent = "A carregar horas de início...";
+        durationsStatus.textContent = "Escolhe uma hora de início para filtrar as durações possíveis.";
+        renderPlaceholder(startsContainer, "A carregar horas de início...");
+        renderPlaceholder(durationsContainer, "As durações válidas aparecem aqui.");
+
+        try {
+          const response = await fetch(`/api/espacos/${selectedSpace.id}/disponibilidade-dia?data=${selectedDate}`);
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.erro || "Não foi possível carregar o dia.");
+          }
+
+          summaryHours.textContent = `${payload.horario_funcionamento.abertura} - ${payload.horario_funcionamento.fecho}`;
+          startsStatus.textContent = `${payload.inicios.length} hora(s) de início disponível(eis) para ${formatDate(payload.data)}.`;
+          renderStartTimes(payload.inicios);
+        } catch (error) {
+          startsStatus.textContent = error.message;
+          renderPlaceholder(startsContainer, error.message);
+        }
+      }
+
+      calendarPrevButton.addEventListener("click", () => {
+        if (currentMonth === 1) {
+          currentMonth = 12;
+          currentYear -= 1;
+        } else {
+          currentMonth -= 1;
+        }
+
+        if (isPastMonth(currentYear, currentMonth)) {
+          currentYear = initialCalendar.ano;
+          currentMonth = initialCalendar.mes;
+          return;
+        }
+
+        loadMonthCalendar();
+      });
+
+      calendarNextButton.addEventListener("click", () => {
+        if (currentMonth === 12) {
+          currentMonth = 1;
+          currentYear += 1;
+        } else {
+          currentMonth += 1;
+        }
+
+        loadMonthCalendar();
+      });
+
+      if (spaceSelect && !fixedSelectedSpace) {
+        spaceSelect.addEventListener("change", () => {
+          currentYear = initialCalendar.ano;
+          currentMonth = initialCalendar.mes;
+          updateSummarySpace();
+          loadMonthCalendar();
+        });
+      }
+
+      updateSummarySpace();
+      updateSubmitState();
+      loadMonthCalendar();
+    </script>
+  </body>
+</html>

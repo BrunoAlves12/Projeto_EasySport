@@ -18,20 +18,20 @@
     />
   </head>
 
-    <body class="admin-page spaces-page">
-      <div class="admin-shell">
-        <header class="admin-header">
-          <a class="admin-brand" href="{{ url_for('main.admin_dashboard') }}">
-            <img
-              class="admin-brand__logo"
-              src="{{ url_for('static', filename='img/easysport-logo.png') }}"
-              alt="Logo EasySport"
-            />
-            <div>
-              <p class="admin-brand__eyebrow">Gestão de espaços</p>
-              <h1>EasySport</h1>
-            </div>
-          </a>
+  <body class="admin-page spaces-page">
+    <div class="admin-shell">
+      <header class="admin-header">
+        <a class="admin-brand" href="{{ url_for('main.admin_dashboard') }}">
+          <img
+            class="admin-brand__logo"
+            src="{{ url_for('static', filename='img/easysport-logo.png') }}"
+            alt="Logo EasySport"
+          />
+          <div>
+            <p class="admin-brand__eyebrow">Gestão de espaços</p>
+            <h1>EasySport</h1>
+          </div>
+        </a>
 
         <div class="spaces-header__actions">
           <a class="spaces-button spaces-button--secondary" href="{{ url_for('espaco.listar_espacos') }}">
@@ -50,74 +50,61 @@
         {% endif %}
       {% endwith %}
 
-        <section class="spaces-form-section">
-          <article class="spaces-form-card">
-            <div class="admin-section__header">
-              <p class="admin-section__eyebrow">Editar espaço</p>
-              <h3>{{ espaco.nome }}</h3>
+      <section class="spaces-form-section">
+        <article class="spaces-form-card">
+          <div class="admin-section__header">
+            <p class="admin-section__eyebrow">Editar espaço</p>
+            <h3>{{ espaco.nome }}</h3>
+          </div>
+
+          <form class="spaces-form" method="POST" enctype="multipart/form-data">
+            <div class="spaces-form__field">
+              <label for="nome">Nome</label>
+              <input type="text" id="nome" name="nome" value="{{ espaco.nome }}" required />
             </div>
 
-            <form class="spaces-form" method="POST" enctype="multipart/form-data">
+            <div class="spaces-form__field">
+              <label for="modalidade">Modalidade</label>
+              <input type="text" id="modalidade" name="modalidade" value="{{ espaco.modalidade or '' }}" required />
+            </div>
+
+            <div class="spaces-form__field">
+              <label for="descricao">Descrição</label>
+              <input type="text" id="descricao" name="descricao" value="{{ espaco.descricao }}" />
+            </div>
+
+            <div class="spaces-form__field">
+              <label for="preco">Preço por hora</label>
+              <input type="number" id="preco" name="preco" value="{{ espaco.precoHora }}" required />
+            </div>
+
+            <div class="spaces-form__media">
               <div class="spaces-form__field">
-                <label for="nome">Nome</label>
-                <input
-                  type="text"
-                  id="nome"
-                  name="nome"
-                  value="{{ espaco.nome }}"
-                  required
-                />
-              </div>
-
-              <div class="spaces-form__field">
-                <label for="descricao">Descrição</label>
-                <input
-                  type="text"
-                  id="descricao"
-                  name="descricao"
-                  value="{{ espaco.descricao }}"
-                />
-              </div>
-
-              <div class="spaces-form__field">
-                <label for="preco">Preço por hora</label>
-                <input
-                  type="number"
-                  id="preco"
-                  name="preco"
-                  value="{{ espaco.precoHora }}"
-                  required
-                />
-              </div>
-
-              <div class="spaces-form__media">
-                <div class="spaces-form__field">
-                  <label>Imagem atual</label>
-                  <div class="spaces-current-image">
-                    <img
-                      src="{{ url_for('static', filename=espaco.imagem_listagem) }}"
-                      alt="{{ espaco.nome }}"
-                    />
-                  </div>
-                </div>
-
-                <div class="spaces-form__field">
-                  <label for="imagem">Nova imagem</label>
-                  <input type="file" id="imagem" name="imagem" accept="image/*" />
-                  <p class="spaces-form__hint">Se não escolher uma nova imagem, a imagem atual será mantida.</p>
+                <label>Imagem atual</label>
+                <div class="spaces-current-image">
+                  <img
+                    src="{{ url_for('static', filename=espaco.imagem_listagem) }}"
+                    alt="{{ espaco.nome }}"
+                  />
                 </div>
               </div>
 
-              <div class="spaces-form__actions">
-                <button class="spaces-button spaces-button--primary" type="submit">Guardar alterações</button>
-                <a class="spaces-button spaces-button--secondary" href="{{ url_for('espaco.listar_espacos') }}">
-                  Sair
-                </a>
+              <div class="spaces-form__field">
+                <label for="imagem">Nova imagem</label>
+                <input type="file" id="imagem" name="imagem" accept="image/*" />
+                <p class="spaces-form__hint">Se não escolher uma nova imagem, a imagem atual será mantida.</p>
               </div>
-            </form>
-          </article>
-        </section>
-      </main>
+            </div>
+
+            <div class="spaces-form__actions">
+              <button class="spaces-button spaces-button--primary" type="submit">Guardar alterações</button>
+              <a class="spaces-button spaces-button--secondary" href="{{ url_for('espaco.listar_espacos') }}">
+                Sair
+              </a>
+            </div>
+          </form>
+        </article>
+      </section>
     </div>
   </body>
 </html>

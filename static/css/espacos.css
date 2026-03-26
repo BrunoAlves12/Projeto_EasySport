@@ -44,6 +44,10 @@
   gap: 20px;
 }
 
+.spaces-grid--user {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .spaces-card,
 .spaces-form-card {
   border-radius: 26px;
@@ -102,6 +106,11 @@
 }
 
 .spaces-card__top {
+  display: grid;
+  gap: 12px;
+}
+
+.spaces-card__meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -111,6 +120,18 @@
 .spaces-card__top h4 {
   margin: 0;
   font-size: 1.28rem;
+}
+
+.spaces-card__sport {
+  display: inline-flex;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(143, 167, 181, 0.16);
+  color: #365465;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .spaces-card__price {
@@ -290,7 +311,8 @@
 }
 
 @media (max-width: 900px) {
-  .spaces-grid {
+  .spaces-grid,
+  .spaces-grid--user {
     grid-template-columns: 1fr;
   }
 

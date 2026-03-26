@@ -50,45 +50,48 @@
         {% endif %}
       {% endwith %}
 
+      <section class="spaces-form-section">
+        <article class="spaces-form-card">
+          <div class="admin-section__header">
+            <p class="admin-section__eyebrow">Novo Espaço</p>
+            <h3>Dados do espaço</h3>
+          </div>
 
-        <section class="spaces-form-section">
-          <article class="spaces-form-card">
-            <div class="admin-section__header">
-              <p class="admin-section__eyebrow">Novo Espaço</p>
-              <h3>Dados do espaço</h3>
+          <form class="spaces-form" action="/espaco" method="post" enctype="multipart/form-data">
+            <div class="spaces-form__field">
+              <label for="nome">Nome</label>
+              <input type="text" id="nome" name="nome" placeholder="Nome do espaço" required />
             </div>
 
-            <form class="spaces-form" action="/espaco" method="post" enctype="multipart/form-data">
-              <div class="spaces-form__field">
-                <label for="nome">Nome</label>
-                <input type="text" id="nome" name="nome" placeholder="Nome do espaço" required />
-              </div>
+            <div class="spaces-form__field">
+              <label for="modalidade">Modalidade</label>
+              <input type="text" id="modalidade" name="modalidade" placeholder="Ex: Futebol, Padel, Ténis" required />
+            </div>
 
-              <div class="spaces-form__field">
-                <label for="descricao">Descrição</label>
-                <input type="text" id="descricao" name="descricao" placeholder="Breve descrição do espaço" />
-              </div>
+            <div class="spaces-form__field">
+              <label for="descricao">Descrição</label>
+              <input type="text" id="descricao" name="descricao" placeholder="Breve descrição do espaço" />
+            </div>
 
-              <div class="spaces-form__field">
-                <label for="preco">Preço por hora</label>
-                <input type="number" id="preco" name="preco" placeholder="Preço" required />
-              </div>
+            <div class="spaces-form__field">
+              <label for="preco">Preço por hora</label>
+              <input type="number" id="preco" name="preco" placeholder="Preço" required />
+            </div>
 
-              <div class="spaces-form__field">
-                <label for="imagem">Imagem do espaço</label>
-                <input type="file" id="imagem" name="imagem" accept="image/*" />
-              </div>
+            <div class="spaces-form__field">
+              <label for="imagem">Imagem do espaço</label>
+              <input type="file" id="imagem" name="imagem" accept="image/*" />
+            </div>
 
-              <div class="spaces-form__actions">
-                <button class="spaces-button spaces-button--primary" type="submit">Criar espaço</button>
-                <a class="spaces-button spaces-button--secondary" href="{{ url_for('espaco.listar_espacos') }}">
-                  Cancelar
-                </a>
-              </div>
-            </form>
-          </article>
-        </section>
-      </main>
+            <div class="spaces-form__actions">
+              <button class="spaces-button spaces-button--primary" type="submit">Criar espaço</button>
+              <a class="spaces-button spaces-button--secondary" href="{{ url_for('espaco.listar_espacos') }}">
+                Cancelar
+              </a>
+            </div>
+          </form>
+        </article>
+      </section>
     </div>
   </body>
 </html>

@@ -1,5 +1,9 @@
-from flask import Blueprint, redirect, render_template, url_for, flash, request, session
+import os
+import random
 from datetime import datetime, timedelta
+
+from flask import Blueprint, current_app, redirect, render_template, url_for, flash, request, session
+
 from app.models import EstadoUser, User, Reserva, Espaco, Pagamento
 from app.extensions import db
 
@@ -7,29 +11,23 @@ main_bp = Blueprint("main", __name__)
 
 
 def _espacos_homepage():
-    return [
-        {
-            "nome": "Basket Park",
-            "modalidade": "Basquetebol",
-            "precoHora": 18.0,
-            "ativo": True,
-            "imagem": "img/basket.png",
-        },
-        {
-            "nome": "Estádio RedBull",
-            "modalidade": "Futebol",
-            "precoHora": 32.0,
-            "ativo": True,
-            "imagem": "img/futebol.png",
-        },
-        {
-            "nome": "Padel Club Indoor",
-            "modalidade": "Padel",
-            "precoHora": 20.0,
-            "ativo": True,
-            "imagem": "img/padel.png",
-        },
-    ]
+    espacos = Espaco.query.filter_by(ativo=True).all()
+    quantidade = min(3, len(espacos))
+
+    if quantidade == 0:
+        return []
+
+    espacos_destaque = random.sample(espacos, quantidade)
+
+    for espaco in espacos_destaque:
+        imagem = espaco.imagem or current_app.config["ESPACO_IMAGEM_DEFAULT"]
+        caminho_imagem = os.path.join(current_app.static_folder, imagem.replace("/", os.sep))
+
+        espaco.imagem_homepage = imagem if os.path.exists(caminho_imagem) else current_app.config["ESPACO_IMAGEM_DEFAULT"]
+        espaco.modalidade_homepage = (espaco.modalidade or "Espaço desportivo").strip()
+        espaco.descricao_curta = (espaco.descricao or "Espaço pronto para reserva.").strip()
+
+    return espacos_destaque
 
 
 def _get_current_user():
@@ -39,8 +37,11 @@ def _get_current_user():
     return User.query.get(session["user_id"])
 
 
-@main_bp.route("/")
+@main_bp.route("/", methods=["GET", "POST"])
 def index():
+    if request.method == "POST":
+        return redirect(url_for("main.index"))
+
     if session.get("user_id"):
         if session.get("is_admin"):
             return redirect(url_for("main.admin_dashboard"))
@@ -162,9 +163,9 @@ def admin_dashboard():
 def registar_page():
     return render_template("registar.html")
 
+
 @main_bp.route("/espaco-page")
 def espaco_page():
-
     if "user_id" not in session:
         flash("Tem de fazer login primeiro")
         return redirect(url_for("auth.login_page"))
@@ -172,16 +173,17 @@ def espaco_page():
     if not session.get("is_admin"):
         flash("Acesso restrito ao administrador")
         return redirect(url_for("main.index"))
-    
+
     return render_template("espaco.html")
+
 
 @main_bp.route("/listar-espacos")
 def listar_espacos_page():
     return redirect(url_for("espaco.listar_espacos"))
 
+
 @main_bp.route("/listar-utilizadores")
 def listar_utilizadores():
-
     if "user_id" not in session:
         flash("Tem de fazer login primeiro")
         return redirect(url_for("auth.login_page"))
@@ -189,7 +191,7 @@ def listar_utilizadores():
     if not session.get("is_admin"):
         flash("Acesso restrito ao administrador")
         return redirect(url_for("main.index"))
-    
+
     users = User.query.filter_by(isAdmin=False).all()
 
     return render_template("listar_utilizadores.html", users=users)
@@ -197,7 +199,6 @@ def listar_utilizadores():
 
 @main_bp.route("/remover-utilizador/<int:user_id>", methods=["POST"])
 def remover_utilizador(user_id):
-
     if "user_id" not in session:
         flash("Tem de fazer login primeiro")
         return redirect(url_for("auth.login_page"))
@@ -215,9 +216,9 @@ def remover_utilizador(user_id):
 
     return redirect(url_for("main.listar_utilizadores"))
 
+
 @main_bp.route("/perfil-utilizador")
 def perfil_utilizador():
-
     if "user_id" not in session:
         flash("Tem de fazer login")
         return redirect(url_for("auth.login_page"))
@@ -226,9 +227,9 @@ def perfil_utilizador():
 
     return render_template("editar_utilizador.html", user=user)
 
+
 @main_bp.route("/editar-utilizador/<int:user_id>")
 def editar_utilizador_page(user_id):
-
     if "user_id" not in session:
         flash("Tem de fazer login primeiro")
         return redirect(url_for("auth.login_page"))
@@ -244,15 +245,12 @@ def editar_utilizador_page(user_id):
 
 @main_bp.route("/editar-utilizador/<int:user_id>", methods=["POST"])
 def editar_utilizador(user_id):
-
     if "user_id" not in session:
         flash("Tem de fazer login primeiro")
         return redirect(url_for("auth.login_page"))
 
     user = User.query.get_or_404(user_id)
 
-    # admin pode editar qualquer utilizador
-    # utilizador normal só pode editar o próprio perfil
     if not session.get("is_admin") and session["user_id"] != user_id:
         flash("Acesso restrito")
         return redirect(url_for("main.index"))
@@ -266,8 +264,8 @@ def editar_utilizador(user_id):
         flash("Todos os campos são obrigatórios")
         if session.get("is_admin"):
             return redirect(url_for("main.editar_utilizador_page", user_id=user.id))
-        else:
-            return redirect(url_for("main.perfil_utilizador"))
+
+        return redirect(url_for("main.perfil_utilizador"))
 
     existe_username = User.query.filter(
         User.username == username,
@@ -278,8 +276,8 @@ def editar_utilizador(user_id):
         flash("Username já existe")
         if session.get("is_admin"):
             return redirect(url_for("main.editar_utilizador_page", user_id=user.id))
-        else:
-            return redirect(url_for("main.perfil_utilizador"))
+
+        return redirect(url_for("main.perfil_utilizador"))
 
     existe_email = User.query.filter(
         User.email == email,
@@ -290,8 +288,8 @@ def editar_utilizador(user_id):
         flash("Email já existe")
         if session.get("is_admin"):
             return redirect(url_for("main.editar_utilizador_page", user_id=user.id))
-        else:
-            return redirect(url_for("main.perfil_utilizador"))
+
+        return redirect(url_for("main.perfil_utilizador"))
 
     user.nome = nome
     user.username = username
@@ -304,7 +302,6 @@ def editar_utilizador(user_id):
 
     db.session.commit()
 
-    # se o próprio utilizador se colocou inativo, termina sessão e volta ao landing
     if not session.get("is_admin") and session["user_id"] == user.id and user.estado == EstadoUser.inativo:
         session.clear()
         flash("Conta desativada com sucesso.")
@@ -314,15 +311,14 @@ def editar_utilizador(user_id):
 
     if session.get("is_admin"):
         return redirect(url_for("main.listar_utilizadores"))
-    else:
-        return redirect(url_for("main.index"))
+
+    return redirect(url_for("main.index"))
 
 
 @main_bp.route("/reservar-page")
 def reservar_page():
-
     if "user_id" not in session:
         flash("Tem de fazer login primeiro")
         return redirect(url_for("auth.login_page"))
-     
+
     return render_template("reservar.html")
