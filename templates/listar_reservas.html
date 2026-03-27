@@ -1,57 +1,359 @@
-<h1>Reservas</h1>
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Consultar reservas | EasySport</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/base.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/admin.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/reservas-admin.css') }}"
+    />
+  </head>
 
-<a href="/">Voltar ao Início</a>
+  <body class="admin-page">
+    <div class="admin-shell">
+      {% with messages = get_flashed_messages() %}
+        <header class="admin-header">
+          <a class="admin-brand" href="{{ url_for('main.admin_dashboard') if is_admin_view else url_for('main.espacos_homepage') }}">
+            <img
+              class="admin-brand__logo"
+              src="{{ url_for('static', filename='img/easysport-logo.png') }}"
+              alt="Logo EasySport"
+            />
+            <div>
+              <p class="admin-brand__eyebrow">
+                {% if is_admin_view %}Painel de Reservas{% else %}As minhas reservas{% endif %}
+              </p>
+              <h1>EasySport</h1>
+            </div>
+          </a>
 
-<br /><br />
+          <div class="admin-userpanel">
+            <details class="admin-profile-menu">
+              <summary class="admin-profile-button">
+                <span class="admin-profile-avatar" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 12a4.25 4.25 0 1 0-4.25-4.25A4.25 4.25 0 0 0 12 12Zm0 2.25c-4.23 0-7.75 2.16-7.75 4.75a1 1 0 0 0 1 1h13.5a1 1 0 0 0 1-1c0-2.59-3.52-4.75-7.75-4.75Z" />
+                  </svg>
+                </span>
+                <span class="admin-profile-content">
+                  <span class="admin-profile-label">
+                    {% if is_admin_view %}Administrador{% else %}Utilizador{% endif %}
+                  </span>
+                  <strong>{{ session["username"] }}</strong>
+                </span>
+                <span class="admin-profile-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" focusable="false">
+                    <path d="m5.25 7.5 4.75 5 4.75-5" />
+                  </svg>
+                </span>
+              </summary>
 
-{% with messages = get_flashed_messages() %} {% if messages %} {% for message in
-messages %}
-<p style="color: green">{{ message }}</p>
-{% endfor %} {% endif %} {% endwith %}
+              <div class="admin-profile-dropdown">
+                {% if is_admin_view %}
+                  <a class="admin-profile-link" href="{{ url_for('main.admin_dashboard') }}">Painel principal</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.listar_utilizadores') }}">Gerir utilizadores</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Gerir espa&ccedil;os</a>
+                  <a class="admin-profile-link" href="{{ url_for('pagamentos.listar_pagamentos') }}">Consultar pagamentos</a>
+                {% else %}
+                  <a class="admin-profile-link" href="{{ url_for('main.espacos_homepage') }}">In&iacute;cio</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Ver espa&ccedil;os</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.perfil_utilizador') }}">Perfil</a>
+                {% endif %}
+                <a class="admin-profile-link admin-profile-link--logout" href="{{ url_for('auth.logout') }}">Logout</a>
+              </div>
+            </details>
+          </div>
+        </header>
 
-<table border="1" cellpadding="10">
-  <tr>
-    <th>ID</th>
-    <th>Utilizador</th>
-    <th>Espaço</th>
-    <th>Início</th>
-    <th>Fim</th>
-    <th>Estado</th>
-    <th>Ações</th>
-  </tr>
+        <main class="admin-main reservations-main{% if is_admin_view %} reservations-main--admin{% endif %}">
+          {% if messages %}
+            <div class="admin-messages">
+              {% for message in messages %}
+                <p class="admin-alert">{{ message }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
 
-  {% for r in reservas %}
-  <tr>
-    <td>{{ r.id }}</td>
-    <td>{{ users[r.idUser].nome }}</td>
-    <td>{{ espacos[r.idEspaco].nome }}</td>
-    <td>{{ r.dataInicio }}</td>
-    <td>{{ r.dataFim }}</td>
-    <td>{{ r.estado.value }}</td>
+          {% if is_admin_view %}
+            <section class="admin-section">
+              <div class="admin-summary-grid admin-summary-grid--compact">
+                {% for item in summary_cards %}
+                  <article class="admin-summary-card">
+                    <div class="admin-summary-card__top">
+                      <div class="admin-summary-card__icon" aria-hidden="true">
+                        {% if item.icone == "calendar" %}
+                          <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M7 3a1 1 0 0 1 1 1v1h8V4a1 1 0 1 1 2 0v1h.5A2.5 2.5 0 0 1 21 7.5v11A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5H6V4a1 1 0 0 1 1-1Zm12 7H5v8.5a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5Zm-1-3H6a1 1 0 0 0-1 1v.5h14V8a1 1 0 0 0-1-1Z" />
+                          </svg>
+                        {% elif item.icone == "pending" %}
+                          <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M12 3.5A8.5 8.5 0 1 0 20.5 12 8.51 8.51 0 0 0 12 3.5Zm1 4.5v4.09l2.8 1.68-.8 1.32-3.5-2.09V8Z" />
+                          </svg>
+                        {% elif item.icone == "active" %}
+                          <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M9.55 17.25 4.8 12.5l1.4-1.4 3.35 3.34 8.25-8.24 1.4 1.4Z" />
+                          </svg>
+                        {% else %}
+                          <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M7.4 6 6 7.4 10.6 12 6 16.6 7.4 18 12 13.4 16.6 18l1.4-1.4-4.6-4.6L18 7.4 16.6 6 12 10.6Z" />
+                          </svg>
+                        {% endif %}
+                      </div>
+                      <span class="admin-summary-card__title">{{ item.titulo }}</span>
+                    </div>
 
-<td>
-  {% if r.estado.value == "pendente" %}
+                    <strong class="admin-summary-card__value">{{ item.valor }}</strong>
+                    <p class="admin-summary-card__detail">{{ item.detalhe }}</p>
+                  </article>
+                {% endfor %}
+              </div>
+            </section>
+          {% endif %}
 
-    {% if not session.get("is_admin") %}
-    <form
-      action="/pagar-reserva/{{ r.id }}"
-      method="post"
-      onsubmit="return confirm('Confirmar pagamento?');"
-    >
-      <button type="submit">Pagar</button>
-    </form>
-    {% endif %}
+          <section class="admin-section reservations-section">
+            <div class="reservations-panel">
+              <div class="reservations-panel__header">
+                <div>
+                  <p class="admin-section__eyebrow">
+                    {% if is_admin_view %}Consultar reservas{% else %}As minhas reservas{% endif %}
+                  </p>
+                  <h3>
+                    {% if is_admin_view %}Filtra a tua pesquisa{% else %}As tuas reservas num s&oacute; lugar{% endif %}
+                  </h3>
+                </div>
+              </div>
 
-    <form
-      action="/cancelar-reserva/{{ r.id }}"
-      method="post"
-      onsubmit="return confirm('Cancelar reserva?');"
-    >
-      <button type="submit">Cancelar</button>
-    </form>
+              {% if is_admin_view %}
+                <form class="reservations-filters" method="get" action="{{ url_for('reservas.listar_reservas') }}">
+                  <label class="reservations-field reservations-field--search">
+                    <span>Pesquisa</span>
+                    <input
+                      type="search"
+                      name="q"
+                      value="{{ filtros.q }}"
+                      placeholder="Utilizador, username ou espa&ccedil;o"
+                    />
+                  </label>
 
-  {% endif %}
-  </td>
-</tr>
-  {% endfor %}
-</table>
+                  <label class="reservations-field">
+                    <span>Estado</span>
+                    <select name="estado">
+                      <option value="">Todos</option>
+                      <option value="pendente" {% if filtros.estado == "pendente" %}selected{% endif %}>Pendente</option>
+                      <option value="confirmada" {% if filtros.estado == "confirmada" %}selected{% endif %}>Confirmada</option>
+                      <option value="cancelada" {% if filtros.estado == "cancelada" %}selected{% endif %}>Cancelada</option>
+                    </select>
+                  </label>
+
+                  <label class="reservations-field">
+                    <span>Data</span>
+                    <input type="date" name="data" value="{{ filtros.data }}" />
+                  </label>
+
+                  <label class="reservations-field">
+                    <span>Espa&ccedil;o</span>
+                    <select name="espaco">
+                      <option value="">Todos</option>
+                      {% for espaco in espaco_opcoes %}
+                        <option value="{{ espaco }}" {% if filtros.espaco == espaco %}selected{% endif %}>{{ espaco }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+
+                  <div class="reservations-filter-actions">
+                    <button class="reservations-button reservations-button--primary" type="submit">Filtrar</button>
+                    <a class="reservations-button reservations-button--ghost" href="{{ url_for('reservas.listar_reservas') }}">Limpar</a>
+                  </div>
+                </form>
+              {% endif %}
+
+                {% if reservas %}
+                  <div class="reservations-table-wrap">
+                    <table class="reservations-table">
+                      <thead>
+                        <tr>
+                          {% if is_admin_view %}<th>Utilizador</th>{% endif %}
+                          <th>Espa&ccedil;o</th>
+                          <th>Modalidade</th>
+                          <th>Data</th>
+                          <th>In&iacute;cio</th>
+                          <th>Fim</th>
+                          <th>Estado</th>
+                          <th>Pagamento</th>
+                          <th>A&ccedil;&otilde;es</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for reserva in reservas %}
+                          <tr>
+                            {% if is_admin_view %}
+                              <td>
+                                <div class="reservations-user">
+                                  <strong>{{ reserva.utilizador }}</strong>
+                                  <span>@{{ reserva.utilizador_username }}</span>
+                                </div>
+                              </td>
+                            {% endif %}
+                            <td>
+                              <div class="reservations-space">
+                                <strong>{{ reserva.espaco }}</strong>
+                                {% if is_admin_view %}
+                                  <span>{{ reserva.modalidade }}</span>
+                                {% endif %}
+                              </div>
+                            </td>
+                            <td>{{ reserva.modalidade }}</td>
+                            <td>{{ reserva.data_label }}</td>
+                            <td>{{ reserva.inicio_label }}</td>
+                            <td>{{ reserva.fim_label }}</td>
+                            <td>
+                              <span class="reservations-badge reservations-badge--{{ reserva.estado }}">
+                                {{ reserva.estado_label }}
+                              </span>
+                            </td>
+                            <td>
+                              <strong class="reservations-payment-value">{{ reserva.pagamento_valor_label }}</strong>
+                            </td>
+                            <td>
+                              <div class="reservations-actions">
+                                {% if is_admin_view %}
+                                  <button
+                                    class="reservations-button reservations-button--ghost js-open-payment-modal{% if reserva.estado in ['pendente', 'cancelada'] %} reservations-button--disabled{% endif %}"
+                                    type="button"
+                                    {% if reserva.estado in ['pendente', 'cancelada'] %}disabled aria-disabled="true"{% endif %}
+                                  >
+                                    Ver
+                                  </button>
+
+                                  {% if reserva.pode_cancelar_admin %}
+                                    <form method="post" action="{{ url_for('reservas.cancelar_reserva', reserva_id=reserva.id) }}">
+                                      <button
+                                        class="reservations-button reservations-button--danger"
+                                        type="submit"
+                                        onclick="return confirm('Cancelar reserva?');"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </form>
+                                  {% endif %}
+                                {% else %}
+                                  {% if reserva.pode_ver_utilizador %}
+                                    <button
+                                      class="reservations-button reservations-button--ghost js-open-payment-modal"
+                                      type="button"
+                                    >
+                                      Ver
+                                    </button>
+                                  {% endif %}
+
+                                  {% if reserva.pode_pagar_utilizador %}
+                                    <form method="post" action="{{ url_for('reservas.pagar_reserva', reserva_id=reserva.id) }}">
+                                      <button
+                                        class="reservations-button reservations-button--payment"
+                                        type="submit"
+                                      >
+                                        Pagar
+                                      </button>
+                                    </form>
+                                  {% endif %}
+
+                                  {% if reserva.pode_cancelar_utilizador %}
+                                    <form method="post" action="{{ url_for('reservas.cancelar_reserva', reserva_id=reserva.id) }}">
+                                      <button
+                                        class="reservations-button reservations-button--danger"
+                                        type="submit"
+                                        onclick="return confirm('Cancelar reserva?');"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </form>
+                                  {% endif %}
+                                {% endif %}
+                              </div>
+                            </td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                {% else %}
+                  <div class="reservations-empty">
+                    <h4>Sem reservas para apresentar</h4>
+                    <p>N&atilde;o foram encontrados resultados para os filtros atuais.</p>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </section>
+        </main>
+      {% endwith %}
+    </div>
+
+    <div class="reservations-modal" id="payment-modal" hidden>
+      <div class="reservations-modal__backdrop" data-close-modal></div>
+      <div class="reservations-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="payment-modal-title">
+        <button class="reservations-modal__close" type="button" data-close-modal aria-label="Fechar detalhe do pagamento">
+          <span aria-hidden="true">&times;</span>
+        </button>
+
+        <div class="reservations-modal__header">
+          <h3 id="payment-modal-title">Dados de pagamento</h3>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const modal = document.getElementById("payment-modal");
+        const openButtons = document.querySelectorAll(".js-open-payment-modal");
+        const closeButtons = modal ? modal.querySelectorAll("[data-close-modal]") : [];
+        const profileMenu = document.querySelector(".admin-profile-menu");
+
+        if (profileMenu) {
+          document.addEventListener("click", (event) => {
+            if (!profileMenu.contains(event.target)) {
+              profileMenu.removeAttribute("open");
+            }
+          });
+        }
+
+        if (!modal || !openButtons.length) {
+          return;
+        }
+
+        const openModal = () => {
+          modal.hidden = false;
+          document.body.classList.add("modal-open");
+        };
+
+        const closeModal = () => {
+          modal.hidden = true;
+          document.body.classList.remove("modal-open");
+        };
+
+        openButtons.forEach((button) => {
+          button.addEventListener("click", openModal);
+        });
+
+        closeButtons.forEach((button) => {
+          button.addEventListener("click", closeModal);
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && !modal.hidden) {
+            closeModal();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

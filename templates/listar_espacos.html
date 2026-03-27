@@ -25,28 +25,57 @@
   <body class="admin-page spaces-page">
     <div class="admin-shell">
       <header class="admin-header">
-        <a class="admin-brand" href="{% if session.get('is_admin') %}{{ url_for('main.admin_dashboard') }}{% else %}{{ url_for('main.index') }}{% endif %}">
+        <a class="admin-brand" href="{% if session.get('is_admin') %}{{ url_for('main.admin_dashboard') }}{% else %}{{ url_for('main.espacos_homepage') }}{% endif %}">
           <img
             class="admin-brand__logo"
             src="{{ url_for('static', filename='img/easysport-logo.png') }}"
             alt="Logo EasySport"
           />
           <div>
-            <p class="admin-brand__eyebrow">Painel de espaços</p>
+            <p class="admin-brand__eyebrow">
+              {% if session.get('is_admin') %}Painel de espaços{% else %}Explorar espaços{% endif %}
+            </p>
             <h1>EasySport</h1>
           </div>
         </a>
 
         <div class="spaces-header__actions">
-          {% if session.get("is_admin") %}
-            <a class="spaces-button spaces-button--primary" href="{{ url_for('main.espaco_page') }}">
-              Adicionar espaço
-            </a>
-          {% endif %}
+          <div class="admin-userpanel">
+            <details class="admin-profile-menu">
+              <summary class="admin-profile-button">
+                <span class="admin-profile-avatar" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 12a4.25 4.25 0 1 0-4.25-4.25A4.25 4.25 0 0 0 12 12Zm0 2.25c-4.23 0-7.75 2.16-7.75 4.75a1 1 0 0 0 1 1h13.5a1 1 0 0 0 1-1c0-2.59-3.52-4.75-7.75-4.75Z" />
+                  </svg>
+                </span>
+                <span class="admin-profile-content">
+                  <span class="admin-profile-label">
+                    {% if session.get('is_admin') %}Administrador{% else %}Utilizador{% endif %}
+                  </span>
+                  <strong>{{ session["username"] }}</strong>
+                </span>
+                <span class="admin-profile-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" focusable="false">
+                    <path d="m5.25 7.5 4.75 5 4.75-5" />
+                  </svg>
+                </span>
+              </summary>
 
-          <a class="spaces-button spaces-button--secondary" href="{% if session.get('is_admin') %}{{ url_for('main.admin_dashboard') }}{% else %}{{ url_for('main.index') }}{% endif %}">
-            Voltar
-          </a>
+              <div class="admin-profile-dropdown">
+                {% if session.get('is_admin') %}
+                  <a class="admin-profile-link" href="{{ url_for('main.admin_dashboard') }}">Painel principal</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.listar_utilizadores') }}">Gerir utilizadores</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Gerir espaços</a>
+                  <a class="admin-profile-link" href="{{ url_for('reservas.listar_reservas') }}">Consultar reservas</a>
+                {% else %}
+                  <a class="admin-profile-link" href="{{ url_for('main.espacos_homepage') }}">Início</a>
+                  <a class="admin-profile-link" href="{{ url_for('reservas.minha_reservas') }}">As minhas reservas</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.perfil_utilizador') }}">Perfil</a>
+                {% endif %}
+                <a class="admin-profile-link admin-profile-link--logout" href="{{ url_for('auth.logout') }}">Logout</a>
+              </div>
+            </details>
+          </div>
         </div>
       </header>
 
@@ -142,7 +171,32 @@
             {% endfor %}
           </div>
         </section>
+
+        {% if session.get("is_admin") %}
+          <section class="admin-section spaces-toolbar-section">
+            <div class="spaces-toolbar">
+              <a class="spaces-button spaces-button--primary" href="{{ url_for('main.espaco_page') }}">
+                Adicionar espaço
+              </a>
+            </div>
+          </section>
+        {% endif %}
       </main>
     </div>
+    <script>
+      (() => {
+        const profileMenu = document.querySelector(".admin-profile-menu");
+
+        if (!profileMenu) {
+          return;
+        }
+
+        document.addEventListener("click", (event) => {
+          if (!profileMenu.contains(event.target)) {
+            profileMenu.removeAttribute("open");
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

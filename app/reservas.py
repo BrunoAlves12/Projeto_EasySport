@@ -190,6 +190,113 @@ def _reserva_respeita_funcionamento(inicio, fim):
     return inicio >= _inicio_funcionamento(data_reserva) and fim <= _fim_funcionamento(data_reserva)
 
 
+def _get_pagamentos_por_reserva():
+    return {pagamento.idReserva: pagamento for pagamento in Pagamento.query.all()}
+
+
+def _estado_reserva_label(estado):
+    labels = {
+        EstadoReserva.pendente: "Pendente",
+        EstadoReserva.confirmada: "Confirmada",
+        EstadoReserva.cancelada: "Cancelada",
+    }
+    return labels.get(estado, "Sem estado")
+
+
+def _build_reserva_view_models(reservas, users, espacos, pagamentos):
+    reservas_view = []
+
+    for reserva in reservas:
+        user = users.get(reserva.idUser)
+        espaco = espacos.get(reserva.idEspaco)
+        pagamento = pagamentos.get(reserva.id)
+        valor = pagamento.valor if pagamento else None
+        estado = reserva.estado.value
+
+        reservas_view.append(
+            {
+                "id": reserva.id,
+                "utilizador": user.nome if user else "Utilizador removido",
+                "utilizador_username": user.username if user else "Sem username",
+                "espaco": espaco.nome if espaco else "Espaço indisponível",
+                "modalidade": (espaco.modalidade or "Espaço desportivo").strip() if espaco else "Espaço desportivo",
+                "data": reserva.dataInicio.date(),
+                "data_label": reserva.dataInicio.strftime("%d/%m/%Y"),
+                "inicio_label": reserva.dataInicio.strftime("%H:%M"),
+                "fim_label": reserva.dataFim.strftime("%H:%M"),
+                "estado": estado,
+                "estado_label": _estado_reserva_label(reserva.estado),
+                "pagamento_valor_label": f"{valor:.2f} EUR" if valor is not None else "-",
+                "pode_ver_utilizador": estado == EstadoReserva.confirmada.value,
+                "pode_pagar_utilizador": estado == EstadoReserva.pendente.value,
+                "pode_cancelar_utilizador": estado == EstadoReserva.pendente.value,
+                "pode_cancelar_admin": estado != EstadoReserva.cancelada.value,
+            }
+        )
+
+    return reservas_view
+
+
+def _apply_reserva_filters(reservas_view, filtros):
+    resultado = reservas_view
+    pesquisa = filtros["q"]
+    estado = filtros["estado"]
+    data = filtros["data"]
+    espaco = filtros["espaco"]
+
+    if pesquisa:
+        termo = pesquisa.lower()
+        resultado = [
+            reserva
+            for reserva in resultado
+            if termo in reserva["utilizador"].lower()
+            or termo in reserva["utilizador_username"].lower()
+            or termo in reserva["espaco"].lower()
+        ]
+
+    if estado:
+        resultado = [reserva for reserva in resultado if reserva["estado"] == estado]
+
+    if data:
+        resultado = [reserva for reserva in resultado if reserva["data"].isoformat() == data]
+
+    if espaco:
+        resultado = [reserva for reserva in resultado if str(reserva["espaco"]) == espaco]
+
+    return resultado
+
+
+def _build_reservas_summary(reservas_view):
+    hoje = date.today().isoformat()
+
+    return [
+        {
+            "titulo": "Reservas de hoje",
+            "valor": sum(1 for reserva in reservas_view if reserva["data"].isoformat() == hoje),
+            "detalhe": "Reservas com data marcada para hoje.",
+            "icone": "calendar",
+        },
+        {
+            "titulo": "Pendentes",
+            "valor": sum(1 for reserva in reservas_view if reserva["estado"] == EstadoReserva.pendente.value),
+            "detalhe": "Reservas ainda por confirmar.",
+            "icone": "pending",
+        },
+        {
+            "titulo": "Confirmadas",
+            "valor": sum(1 for reserva in reservas_view if reserva["estado"] == EstadoReserva.confirmada.value),
+            "detalhe": "Reservas confirmadas.",
+            "icone": "active",
+        },
+        {
+            "titulo": "Canceladas",
+            "valor": sum(1 for reserva in reservas_view if reserva["estado"] == EstadoReserva.cancelada.value),
+            "detalhe": "Reservas que foram canceladas.",
+            "icone": "cancelled",
+        },
+    ]
+
+
 @reservas_bp.route("/reservar")
 def reservar_page():
     if "user_id" not in session:
@@ -357,43 +464,89 @@ def criar_reserva():
     db.session.commit()
 
     flash("Reserva criada com sucesso")
-    return redirect(url_for("reservas.listar_reservas"))
+    return redirect(url_for("reservas.minha_reservas"))
 
 
 @reservas_bp.route("/reservas")
 def listar_reservas():
-    reservas = Reserva.query.all()
+    if "user_id" not in session:
+        return redirect(url_for("auth.login_page"))
+
+    if not session.get("is_admin"):
+        flash("Acesso restrito ao administrador")
+        return redirect(url_for("main.index"))
+
+    filtros = {
+        "q": request.args.get("q", "").strip(),
+        "estado": request.args.get("estado", "").strip(),
+        "data": request.args.get("data", "").strip(),
+        "espaco": request.args.get("espaco", "").strip(),
+    }
+
+    reservas = Reserva.query.order_by(Reserva.dataInicio.desc()).all()
     users = {u.id: u for u in User.query.all()}
     espacos = {e.id: e for e in Espaco.query.all()}
+    pagamentos = _get_pagamentos_por_reserva()
+    reservas_view = _build_reserva_view_models(reservas, users, espacos, pagamentos)
+    reservas_filtradas = _apply_reserva_filters(reservas_view, filtros)
 
     return render_template(
         "listar_reservas.html",
-        reservas=reservas,
-        users=users,
-        espacos=espacos,
+        reservas=reservas_filtradas,
+        summary_cards=_build_reservas_summary(reservas_view),
+        filtros=filtros,
+        espaco_opcoes=sorted({reserva["espaco"] for reserva in reservas_view}),
+        is_admin_view=True,
     )
 
 
 @reservas_bp.route("/cancelar-reserva/<int:reserva_id>", methods=["POST"])
 def cancelar_reserva(reserva_id):
+    if "user_id" not in session:
+        return redirect(url_for("auth.login_page"))
+
     reserva = Reserva.query.get_or_404(reserva_id)
+
+    if not session.get("is_admin") and reserva.idUser != session["user_id"]:
+        flash("Acesso restrito")
+        return redirect(url_for("main.index"))
+
     reserva.estado = EstadoReserva.cancelada
+    pagamento = Pagamento.query.filter_by(idReserva=reserva.id).first()
+
+    if pagamento and pagamento.estado != "pago":
+        pagamento.estado = "cancelado"
+        pagamento.dataPagamento = None
 
     db.session.commit()
 
     flash("Reserva cancelada")
-    return redirect(url_for("reservas.listar_reservas"))
+    if session.get("is_admin"):
+        return redirect(url_for("reservas.listar_reservas"))
+
+    return redirect(url_for("reservas.minha_reservas"))
 
 
 @reservas_bp.route("/pagar-reserva/<int:reserva_id>", methods=["POST"])
 def pagar_reserva(reserva_id):
+    if "user_id" not in session:
+        return redirect(url_for("auth.login_page"))
+
     reserva = Reserva.query.get_or_404(reserva_id)
+
+    if not session.get("is_admin") and reserva.idUser != session["user_id"]:
+        flash("Acesso restrito")
+        return redirect(url_for("main.index"))
+
     reserva.estado = EstadoReserva.confirmada
 
     db.session.commit()
 
-    flash("Pagamento confirmado e reserva concluída")
-    return redirect(url_for("reservas.listar_reservas"))
+    flash("Reserva confirmada com sucesso")
+    if session.get("is_admin"):
+        return redirect(url_for("reservas.listar_reservas"))
+
+    return redirect(url_for("reservas.minha_reservas"))
 
 
 @reservas_bp.route("/minhas-reservas")
@@ -401,13 +554,16 @@ def minha_reservas():
     if "user_id" not in session:
         return redirect(url_for("auth.login_page"))
 
-    reservas = Reserva.query.filter_by(idUser=session["user_id"]).all()
+    reservas = Reserva.query.filter_by(idUser=session["user_id"]).order_by(Reserva.dataInicio.desc()).all()
     users = {u.id: u for u in User.query.filter_by(isAdmin=False).all()}
     espacos = {e.id: e for e in Espaco.query.all()}
+    pagamentos = _get_pagamentos_por_reserva()
+    reservas_view = _build_reserva_view_models(reservas, users, espacos, pagamentos)
 
     return render_template(
         "listar_reservas.html",
-        reservas=reservas,
-        users=users,
-        espacos=espacos,
+        reservas=reservas_view,
+        filtros={"q": "", "estado": "", "data": "", "espaco": ""},
+        espaco_opcoes=sorted({reserva["espaco"] for reserva in reservas_view}),
+        is_admin_view=False,
     )
