@@ -412,33 +412,33 @@ def criar_reserva():
 
     espaco = _obter_espaco_por_id(espaco_id)
     if not espaco:
-        flash("Espaço inválido")
+        flash("Espaço inválido", "danger")
         return redirect(url_for("reservas.reservar_page"))
 
     if not inicio or not fim:
-        flash("Escolhe o dia, a hora de início e a duração da reserva")
+        flash("Escolhe o dia, a hora de início e a duração da reserva", "danger")
         return redirect(url_for("reservas.reservar_page", espaco_id=espaco_id))
 
     if fim <= inicio:
-        flash("Hora do fim inválida")
+        flash("Hora do fim inválida", "danger")
         return redirect(url_for("reservas.reservar_page", espaco_id=espaco_id))
 
     if inicio < datetime.now():
-        flash("Não é possível reservar datas no passado")
+        flash("Não é possível reservar datas no passado", "danger")
         return redirect(url_for("reservas.reservar_page", espaco_id=espaco_id))
 
     duracao_horas = (fim - inicio).total_seconds() / 3600
     if duracao_horas < DURACAO_MINIMA_HORAS or int(duracao_horas) != duracao_horas:
-        flash("Escolhe uma duração válida para esta reserva")
+        flash("Escolhe uma duração válida para esta reserva", "danger")
         return redirect(url_for("reservas.reservar_page", espaco_id=espaco_id))
 
     if not _reserva_respeita_funcionamento(inicio, fim):
-        flash("A reserva tem de respeitar o horário de funcionamento do espaço")
+        flash("A reserva tem de respeitar o horário de funcionamento do espaço", "danger")
         return redirect(url_for("reservas.reservar_page", espaco_id=espaco_id))
 
     reservas = _reservas_do_periodo(espaco_id, _inicio_funcionamento(inicio.date()), _fim_funcionamento(inicio.date()))
     if _intervalo_conflita(reservas, inicio, fim):
-        flash("Já existe uma reserva para este espaço nesse intervalo")
+        flash("Já existe uma reserva para este espaço nesse intervalo", "danger")
         return redirect(url_for("reservas.reservar_page", espaco_id=espaco_id))
 
     reserva = Reserva(
@@ -463,7 +463,7 @@ def criar_reserva():
     db.session.add(pagamento)
     db.session.commit()
 
-    flash("Reserva criada com sucesso")
+    flash("Reserva criada com sucesso", "success")
     return redirect(url_for("reservas.minha_reservas"))
 
 
@@ -473,7 +473,7 @@ def listar_reservas():
         return redirect(url_for("auth.login_page"))
 
     if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador")
+        flash("Acesso restrito ao administrador", "danger")
         return redirect(url_for("main.index"))
 
     filtros = {
@@ -508,7 +508,7 @@ def cancelar_reserva(reserva_id):
     reserva = Reserva.query.get_or_404(reserva_id)
 
     if not session.get("is_admin") and reserva.idUser != session["user_id"]:
-        flash("Acesso restrito")
+        flash("Acesso restrito", "danger")
         return redirect(url_for("main.index"))
 
     reserva.estado = EstadoReserva.cancelada
@@ -520,7 +520,7 @@ def cancelar_reserva(reserva_id):
 
     db.session.commit()
 
-    flash("Reserva cancelada")
+    flash("Reserva cancelada", "success")
     if session.get("is_admin"):
         return redirect(url_for("reservas.listar_reservas"))
 
@@ -535,14 +535,14 @@ def pagar_reserva(reserva_id):
     reserva = Reserva.query.get_or_404(reserva_id)
 
     if not session.get("is_admin") and reserva.idUser != session["user_id"]:
-        flash("Acesso restrito")
+        flash("Acesso restrito", "danger")
         return redirect(url_for("main.index"))
 
     reserva.estado = EstadoReserva.confirmada
 
     db.session.commit()
 
-    flash("Reserva confirmada com sucesso")
+    flash("Reserva confirmada com sucesso", "success")
     if session.get("is_admin"):
         return redirect(url_for("reservas.listar_reservas"))
 

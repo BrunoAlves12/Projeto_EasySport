@@ -15,7 +15,7 @@ def _espacos_homepage():
     quantidade = min(3, len(espacos))
 
     if quantidade == 0:
-        return []
+        return [], False
 
     espacos_destaque = random.sample(espacos, quantidade)
 
@@ -27,7 +27,7 @@ def _espacos_homepage():
         espaco.modalidade_homepage = (espaco.modalidade or "Espaço desportivo").strip()
         espaco.descricao_curta = (espaco.descricao or "Espaço pronto para reserva.").strip()
 
-    return espacos_destaque
+    return espacos_destaque, len(espacos) > quantidade
 
 
 def _get_current_user():
@@ -35,6 +35,10 @@ def _get_current_user():
         return None
 
     return User.query.get(session["user_id"])
+
+
+def _render_editar_utilizador_form(user, form_data=None):
+    return render_template("editar_utilizador.html", user=user, form_data=form_data or {})
 
 
 @main_bp.route("/", methods=["GET", "POST"])
@@ -57,10 +61,12 @@ def espacos_homepage():
         return redirect(url_for("main.admin_dashboard"))
 
     current_user = _get_current_user()
+    espacos_destaque, mostrar_botao_mais_espacos = _espacos_homepage()
 
     return render_template(
         "index.html",
-        espacos_destaque=_espacos_homepage(),
+        espacos_destaque=espacos_destaque,
+        mostrar_botao_mais_espacos=mostrar_botao_mais_espacos,
         current_user=current_user
     )
 
@@ -68,11 +74,11 @@ def espacos_homepage():
 @main_bp.route("/admin")
 def admin_dashboard():
     if "user_id" not in session:
-        flash("Tem de fazer login primeiro")
+        flash("Tem de fazer login primeiro", "danger")
         return redirect(url_for("auth.login_page"))
 
     if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador")
+        flash("Acesso restrito ao administrador", "danger")
         return redirect(url_for("main.index"))
 
     current_user = _get_current_user()
@@ -161,20 +167,20 @@ def admin_dashboard():
 
 @main_bp.route("/registar-page")
 def registar_page():
-    return render_template("registar.html")
+    return render_template("registar.html", form_data={})
 
 
 @main_bp.route("/espaco-page")
 def espaco_page():
     if "user_id" not in session:
-        flash("Tem de fazer login primeiro")
+        flash("Tem de fazer login primeiro", "danger")
         return redirect(url_for("auth.login_page"))
 
     if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador")
+        flash("Acesso restrito ao administrador", "danger")
         return redirect(url_for("main.index"))
 
-    return render_template("espaco.html")
+    return render_template("espaco.html", form_data={})
 
 
 @main_bp.route("/listar-espacos")
@@ -185,11 +191,11 @@ def listar_espacos_page():
 @main_bp.route("/listar-utilizadores")
 def listar_utilizadores():
     if "user_id" not in session:
-        flash("Tem de fazer login primeiro")
+        flash("Tem de fazer login primeiro", "danger")
         return redirect(url_for("auth.login_page"))
 
     if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador")
+        flash("Acesso restrito ao administrador", "danger")
         return redirect(url_for("main.index"))
 
     users = User.query.filter_by(isAdmin=False).all()
@@ -200,11 +206,11 @@ def listar_utilizadores():
 @main_bp.route("/remover-utilizador/<int:user_id>", methods=["POST"])
 def remover_utilizador(user_id):
     if "user_id" not in session:
-        flash("Tem de fazer login primeiro")
+        flash("Tem de fazer login primeiro", "danger")
         return redirect(url_for("auth.login_page"))
 
     if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador")
+        flash("Acesso restrito ao administrador", "danger")
         return redirect(url_for("main.index"))
 
     user = User.query.get_or_404(user_id)
@@ -212,7 +218,7 @@ def remover_utilizador(user_id):
     db.session.delete(user)
     db.session.commit()
 
-    flash("Utilizador removido com sucesso!")
+    flash("Utilizador removido com sucesso!", "success")
 
     return redirect(url_for("main.listar_utilizadores"))
 
@@ -220,52 +226,55 @@ def remover_utilizador(user_id):
 @main_bp.route("/perfil-utilizador")
 def perfil_utilizador():
     if "user_id" not in session:
-        flash("Tem de fazer login")
+        flash("Tem de fazer login", "danger")
         return redirect(url_for("auth.login_page"))
 
     user = User.query.get(session["user_id"])
 
-    return render_template("editar_utilizador.html", user=user)
+    return _render_editar_utilizador_form(user)
 
 
 @main_bp.route("/editar-utilizador/<int:user_id>")
 def editar_utilizador_page(user_id):
     if "user_id" not in session:
-        flash("Tem de fazer login primeiro")
+        flash("Tem de fazer login primeiro", "danger")
         return redirect(url_for("auth.login_page"))
 
     if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador")
+        flash("Acesso restrito ao administrador", "danger")
         return redirect(url_for("main.index"))
 
     user = User.query.get_or_404(user_id)
 
-    return render_template("editar_utilizador.html", user=user)
+    return _render_editar_utilizador_form(user)
 
 
 @main_bp.route("/editar-utilizador/<int:user_id>", methods=["POST"])
 def editar_utilizador(user_id):
     if "user_id" not in session:
-        flash("Tem de fazer login primeiro")
+        flash("Tem de fazer login primeiro", "danger")
         return redirect(url_for("auth.login_page"))
 
     user = User.query.get_or_404(user_id)
 
     if not session.get("is_admin") and session["user_id"] != user_id:
-        flash("Acesso restrito")
+        flash("Acesso restrito", "danger")
         return redirect(url_for("main.index"))
 
-    nome = request.form["nome"]
-    username = request.form["username"]
-    email = request.form["email"]
-    estado = request.form["estado"]
+    nome = request.form.get("nome", "").strip()
+    username = request.form.get("username", "").strip()
+    email = request.form.get("email", "").strip()
+    estado = request.form.get("estado", "").strip()
+    form_data = {
+        "nome": nome,
+        "username": username,
+        "email": email,
+        "estado": estado,
+    }
 
     if not nome or not username or not email or not estado:
-        flash("Todos os campos são obrigatórios")
-        if session.get("is_admin"):
-            return redirect(url_for("main.editar_utilizador_page", user_id=user.id))
-
-        return redirect(url_for("main.perfil_utilizador"))
+        flash("Todos os campos são obrigatórios", "danger")
+        return _render_editar_utilizador_form(user, form_data)
 
     existe_username = User.query.filter(
         User.username == username,
@@ -273,11 +282,8 @@ def editar_utilizador(user_id):
     ).first()
 
     if existe_username:
-        flash("Username já existe")
-        if session.get("is_admin"):
-            return redirect(url_for("main.editar_utilizador_page", user_id=user.id))
-
-        return redirect(url_for("main.perfil_utilizador"))
+        flash("Username já existe", "danger")
+        return _render_editar_utilizador_form(user, form_data)
 
     existe_email = User.query.filter(
         User.email == email,
@@ -285,11 +291,8 @@ def editar_utilizador(user_id):
     ).first()
 
     if existe_email:
-        flash("Email já existe")
-        if session.get("is_admin"):
-            return redirect(url_for("main.editar_utilizador_page", user_id=user.id))
-
-        return redirect(url_for("main.perfil_utilizador"))
+        flash("Email já existe", "danger")
+        return _render_editar_utilizador_form(user, form_data)
 
     user.nome = nome
     user.username = username
@@ -304,10 +307,10 @@ def editar_utilizador(user_id):
 
     if not session.get("is_admin") and session["user_id"] == user.id and user.estado == EstadoUser.inativo:
         session.clear()
-        flash("Conta desativada com sucesso.")
+        flash("Conta desativada com sucesso.", "success")
         return redirect(url_for("main.index"))
 
-    flash("Utilizador atualizado com sucesso!")
+    flash("Utilizador atualizado com sucesso!", "success")
 
     if session.get("is_admin"):
         return redirect(url_for("main.listar_utilizadores"))
@@ -318,7 +321,7 @@ def editar_utilizador(user_id):
 @main_bp.route("/reservar-page")
 def reservar_page():
     if "user_id" not in session:
-        flash("Tem de fazer login primeiro")
+        flash("Tem de fazer login primeiro", "danger")
         return redirect(url_for("auth.login_page"))
 
     return render_template("reservar.html")

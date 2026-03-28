@@ -103,6 +103,31 @@ body.landing-page {
   min-width: 170px;
 }
 
+.landing-messages {
+  margin-top: 18px;
+}
+
+.landing-alert {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(18, 24, 30, 0.82);
+  color: #f6efe7;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+}
+
+.landing-alert--success {
+  border-color: rgba(106, 154, 121, 0.34);
+  background: rgba(26, 43, 34, 0.9);
+  color: #b9e2c4;
+}
+
+.landing-alert--danger {
+  border-color: rgba(216, 139, 116, 0.34);
+  background: rgba(55, 31, 25, 0.9);
+  color: #f0c1b0;
+}
+
 .landing-hero {
   margin-top: 28px;
   min-height: 620px;

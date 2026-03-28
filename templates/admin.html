@@ -16,13 +16,14 @@
 
   <body class="admin-page">
     <div class="admin-shell">
-      {% with messages = get_flashed_messages() %}
-        {% set ns = namespace(login_message=None, other_messages=[]) %}
-        {% for message in messages %}
+      {% with messages = get_flashed_messages(with_categories=True) %}
+        {% set ns = namespace(login_message=None, login_category='success', other_messages=[]) %}
+        {% for category, message in messages %}
           {% if message == "Login efetuado com sucesso" and ns.login_message is none %}
             {% set ns.login_message = message %}
+            {% set ns.login_category = category %}
           {% else %}
-            {% set ns.other_messages = ns.other_messages + [message] %}
+            {% set ns.other_messages = ns.other_messages + [[category, message]] %}
           {% endif %}
         {% endfor %}
 
@@ -68,15 +69,21 @@
             </details>
 
             {% if ns.login_message %}
-              <p class="admin-profile-alert">{{ ns.login_message }}</p>
+              <div class="admin-profile-alert admin-profile-alert--{{ ns.login_category }} flash-message" data-flash-message>
+                <span class="flash-message__text">{{ ns.login_message }}</span>
+                <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+              </div>
             {% endif %}
           </div>
         </header>
 
           {% if ns.other_messages %}
-            <div class="admin-messages">
-              {% for message in ns.other_messages %}
-                <p class="admin-alert">{{ message }}</p>
+            <div class="admin-messages flash-stack">
+              {% for category, message in ns.other_messages %}
+                <div class="admin-alert admin-alert--{{ category }} flash-message" data-flash-message>
+                  <span class="flash-message__text">{{ message }}</span>
+                  <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+                </div>
               {% endfor %}
             </div>
           {% endif %}
@@ -164,5 +171,6 @@
         </main>
       {% endwith %}
     </div>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
   </body>
 </html>

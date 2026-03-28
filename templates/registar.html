@@ -29,20 +29,23 @@
           </p> -->
         </div>
 
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=True) %}
           {% if messages %}
-            <div class="auth-messages">
-              {% for message in messages %}
-                <p class="auth-alert">{{ message }}</p>
+            <div class="auth-messages flash-stack">
+              {% for category, message in messages %}
+                <div class="auth-alert auth-alert--{{ category }} flash-message" data-flash-message>
+                  <span class="flash-message__text">{{ message }}</span>
+                  <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+                </div>
               {% endfor %}
             </div>
           {% endif %}
         {% endwith %}
 
-        <form class="auth-form" action="/register" method="post">
+        <form class="auth-form" action="/register" method="post" data-custom-validation="true" data-validation-stack-class="auth-messages flash-stack" data-validation-alert-class="auth-alert auth-alert--danger flash-message">
           <div class="auth-field">
             <label for="nome">Nome</label>
-            <input id="nome" type="text" name="nome" placeholder="Nome" required />
+            <input id="nome" type="text" name="nome" placeholder="Nome" value="{{ form_data.get('nome', '') }}" required />
           </div>
 
           <div class="auth-field">
@@ -52,6 +55,7 @@
               type="text"
               name="username"
               placeholder="Username"
+              value="{{ form_data.get('username', '') }}"
               required
             />
           </div>
@@ -63,6 +67,7 @@
               type="email"
               name="email"
               placeholder="Email"
+              value="{{ form_data.get('email', '') }}"
               required
             />
           </div>
@@ -84,6 +89,7 @@
               id="dataNascimento"
               type="date"
               name="dataNascimento"
+              value="{{ form_data.get('dataNascimento', '') }}"
               required
             />
           </div>
@@ -100,5 +106,7 @@
         </div>
       </section>
     </main>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>
   </body>
 </html>

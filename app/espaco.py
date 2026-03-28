@@ -50,40 +50,56 @@ def _resolver_imagem_listagem(espaco):
     return imagem
 
 
+def _render_criar_espaco_form(form_data=None):
+    return render_template("espaco.html", form_data=form_data or {})
+
+
+def _render_editar_espaco_form(espaco, form_data=None):
+    espaco.imagem_listagem = _resolver_imagem_listagem(espaco)
+    return render_template("editar_espaco.html", espaco=espaco, form_data=form_data or {})
+
+
 @espaco_bp.route("/espaco", methods=["POST"])
 def criar_espaco():
-    nome = request.form["nome"]
-    modalidade = request.form["modalidade"]
-    descricao = request.form["descricao"]
-    preco_str = request.form["preco"]
+    nome = request.form.get("nome", "").strip()
+    modalidade = request.form.get("modalidade", "").strip()
+    descricao = request.form.get("descricao", "").strip()
+    preco_str = request.form.get("preco", "").strip()
     imagem_file = request.files.get("imagem")
+
+    form_data = {
+        "nome": nome,
+        "modalidade": modalidade,
+        "descricao": descricao,
+        "preco": preco_str,
+    }
 
     try:
         preco = float(preco_str)
     except Exception:
-        flash("Preço inválido")
-        return redirect(url_for("main.espaco_page"))
+        flash("Preço inválido", "danger")
+        return _render_criar_espaco_form(form_data)
 
     if not nome:
-        flash("Nome do espaço é obrigatório")
-        return redirect(url_for("main.espaco_page"))
+        flash("Nome do espaço é obrigatório", "danger")
+        return _render_criar_espaco_form(form_data)
 
     if not modalidade:
-        flash("Modalidade é obrigatória")
-        return redirect(url_for("main.espaco_page"))
+        flash("Modalidade é obrigatória", "danger")
+        return _render_criar_espaco_form(form_data)
 
     if preco <= 0:
-        flash("Preço inválido")
-        return redirect(url_for("main.espaco_page"))
+        flash("Preço inválido", "danger")
+        return _render_criar_espaco_form(form_data)
 
     if not session.get("is_admin"):
-        flash("Acesso restrito ao admin")
+        flash("Acesso restrito ao admin", "danger")
         return redirect(url_for("main.index"))
 
     imagem = _obter_imagem_para_espaco(imagem_file)
     if imagem_file and imagem is None:
-        flash("Formato de imagem inválido")
-        return redirect(url_for("main.espaco_page"))
+        flash("Formato de imagem inválido", "danger")
+        return _render_criar_espaco_form(form_data)
 
     espaco = Espaco(
         nome=nome,
@@ -91,14 +107,13 @@ def criar_espaco():
         descricao=descricao,
         imagem=imagem,
         precoHora=preco,
-        ativo=True
+        ativo=True,
     )
 
     db.session.add(espaco)
     db.session.commit()
 
-    flash("Espaço criado com sucesso!")
-
+    flash("Espaço criado com sucesso!", "success")
     return redirect(url_for("espaco.listar_espacos"))
 
 
@@ -113,53 +128,57 @@ def listar_espacos():
         espaco.imagem_listagem = _resolver_imagem_listagem(espaco)
         espaco.modalidade_listagem = (espaco.modalidade or "Espaço desportivo").strip()
 
-    return render_template(
-        "listar_espacos.html",
-        espacos=espacos
-    )
+    return render_template("listar_espacos.html", espacos=espacos)
 
 
 @espaco_bp.route("/editar-espaco/<int:id>", methods=["GET", "POST"])
 def editar_espaco(id):
     if not session.get("is_admin"):
-        flash("Acesso restrito ao admin")
+        flash("Acesso restrito ao admin", "danger")
         return redirect(url_for("main.index"))
 
     espaco = Espaco.query.get(id)
 
     if not espaco:
-        flash("Espaço não encontrado")
+        flash("Espaço não encontrado", "danger")
         return redirect(url_for("main.index"))
 
     if request.method == "POST":
-        nome = request.form["nome"]
-        modalidade = request.form["modalidade"]
-        descricao = request.form["descricao"]
-        preco_str = request.form["preco"]
+        nome = request.form.get("nome", "").strip()
+        modalidade = request.form.get("modalidade", "").strip()
+        descricao = request.form.get("descricao", "").strip()
+        preco_str = request.form.get("preco", "").strip()
         imagem_file = request.files.get("imagem")
 
+        form_data = {
+            "nome": nome,
+            "modalidade": modalidade,
+            "descricao": descricao,
+            "preco": preco_str,
+        }
+
         if not nome:
-            flash("Nome do espaço é obrigatório")
-            return redirect(url_for("espaco.editar_espaco", id=id))
+            flash("Nome do espaço é obrigatório", "danger")
+            return _render_editar_espaco_form(espaco, form_data)
 
         if not modalidade:
-            flash("Modalidade é obrigatória")
-            return redirect(url_for("espaco.editar_espaco", id=id))
+            flash("Modalidade é obrigatória", "danger")
+            return _render_editar_espaco_form(espaco, form_data)
 
         try:
             preco = float(preco_str)
         except Exception:
-            flash("Preço inválido")
-            return redirect(url_for("espaco.editar_espaco", id=id))
+            flash("Preço inválido", "danger")
+            return _render_editar_espaco_form(espaco, form_data)
 
         if preco <= 0:
-            flash("Preço inválido")
-            return redirect(url_for("espaco.editar_espaco", id=id))
+            flash("Preço inválido", "danger")
+            return _render_editar_espaco_form(espaco, form_data)
 
         imagem = _obter_imagem_para_espaco(imagem_file, espaco.imagem)
         if imagem_file and imagem is None:
-            flash("Formato de imagem inválido")
-            return redirect(url_for("espaco.editar_espaco", id=id))
+            flash("Formato de imagem inválido", "danger")
+            return _render_editar_espaco_form(espaco, form_data)
 
         espaco.nome = nome
         espaco.modalidade = modalidade
@@ -168,46 +187,45 @@ def editar_espaco(id):
         espaco.precoHora = preco
 
         db.session.commit()
-        flash("Espaço editado com sucesso")
+        flash("Espaço editado com sucesso", "success")
         return redirect(url_for("espaco.listar_espacos"))
 
-    espaco.imagem_listagem = _resolver_imagem_listagem(espaco)
-    return render_template("editar_espaco.html", espaco=espaco)
+    return _render_editar_espaco_form(espaco)
 
 
 @espaco_bp.route("/desativar-espaco/<int:id>")
 def desativar_espaco(id):
     if not session.get("is_admin"):
-        flash("Acesso restrito ao admin")
+        flash("Acesso restrito ao admin", "danger")
         return redirect(url_for("main.index"))
 
     espaco = Espaco.query.get(id)
 
     if not espaco:
-        flash("Espaço não encontrado")
+        flash("Espaço não encontrado", "danger")
         return redirect(url_for("main.index"))
 
     espaco.ativo = False
     db.session.commit()
 
-    flash("Espaço desativado com sucesso")
+    flash("Espaço desativado com sucesso", "success")
     return redirect(url_for("espaco.listar_espacos"))
 
 
 @espaco_bp.route("/ativar-espaco/<int:id>")
 def ativar_espaco(id):
     if not session.get("is_admin"):
-        flash("Acesso restrito ao admin")
+        flash("Acesso restrito ao admin", "danger")
         return redirect(url_for("main.index"))
 
     espaco = Espaco.query.get(id)
 
     if not espaco:
-        flash("Espaço não encontrado")
+        flash("Espaço não encontrado", "danger")
         return redirect(url_for("main.index"))
 
     espaco.ativo = True
     db.session.commit()
 
-    flash("Espaço ativado com sucesso")
+    flash("Espaço ativado com sucesso", "success")
     return redirect(url_for("espaco.listar_espacos"))

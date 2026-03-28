@@ -16,13 +16,14 @@
 
   <body class="home-page">
     <div class="home-shell">
-      {% with messages = get_flashed_messages() %}
-        {% set ns = namespace(login_message=None, other_messages=[]) %}
-        {% for message in messages %}
+      {% with messages = get_flashed_messages(with_categories=True) %}
+        {% set ns = namespace(login_message=None, login_category='success', other_messages=[]) %}
+        {% for category, message in messages %}
           {% if session.get("user_id") and message == "Login efetuado com sucesso" and ns.login_message is none %}
             {% set ns.login_message = message %}
+            {% set ns.login_category = category %}
           {% else %}
-            {% set ns.other_messages = ns.other_messages + [message] %}
+            {% set ns.other_messages = ns.other_messages + [[category, message]] %}
           {% endif %}
         {% endfor %}
 
@@ -68,7 +69,10 @@
               </details>
 
               {% if ns.login_message %}
-                <p class="home-profile-alert">{{ ns.login_message }}</p>
+                <div class="home-profile-alert home-profile-alert--{{ ns.login_category }} flash-message" data-flash-message>
+                  <span class="flash-message__text">{{ ns.login_message }}</span>
+                  <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+                </div>
               {% endif %}
             </div>
           {% else %}
@@ -91,9 +95,12 @@
           </section>
 
           {% if ns.other_messages %}
-            <div class="home-messages">
-              {% for message in ns.other_messages %}
-                <p class="home-alert">{{ message }}</p>
+            <div class="home-messages flash-stack">
+              {% for category, message in ns.other_messages %}
+                <div class="home-alert home-alert--{{ category }} flash-message" data-flash-message>
+                  <span class="flash-message__text">{{ message }}</span>
+                  <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+                </div>
               {% endfor %}
             </div>
           {% endif %}
@@ -129,16 +136,19 @@
             {% endfor %}
           </section>
 
-          <div class="home-more-actions">
-            <a
-              class="home-button home-button--more"
-              href="{% if session.get('user_id') %}{{ url_for('main.listar_espacos_page') }}{% else %}{{ url_for('auth.login_page') }}{% endif %}"
-            >
-              Mais espaços
-            </a>
-          </div>
+          {% if mostrar_botao_mais_espacos %}
+            <div class="home-more-actions">
+              <a
+                class="home-button home-button--more"
+                href="{% if session.get('user_id') %}{{ url_for('main.listar_espacos_page') }}{% else %}{{ url_for('auth.login_page') }}{% endif %}"
+              >
+                Mais espaços
+              </a>
+            </div>
+          {% endif %}
         </main>
       {% endwith %}
     </div>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
   </body>
 </html>

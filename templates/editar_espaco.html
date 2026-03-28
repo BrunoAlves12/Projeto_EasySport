@@ -40,11 +40,14 @@
         </div>
       </header>
 
-      {% with messages = get_flashed_messages() %}
+      {% with messages = get_flashed_messages(with_categories=True) %}
         {% if messages %}
-          <div class="admin-messages">
-            {% for message in messages %}
-              <p class="admin-alert">{{ message }}</p>
+          <div class="admin-messages flash-stack">
+            {% for category, message in messages %}
+              <div class="admin-alert admin-alert--{{ category }} flash-message" data-flash-message>
+                <span class="flash-message__text">{{ message }}</span>
+                <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+              </div>
             {% endfor %}
           </div>
         {% endif %}
@@ -57,25 +60,25 @@
             <h3>{{ espaco.nome }}</h3>
           </div>
 
-          <form class="spaces-form" method="POST" enctype="multipart/form-data">
+          <form class="spaces-form" method="POST" enctype="multipart/form-data" data-custom-validation="true" data-validation-stack-class="admin-messages flash-stack" data-validation-alert-class="admin-alert admin-alert--danger flash-message">
             <div class="spaces-form__field">
               <label for="nome">Nome</label>
-              <input type="text" id="nome" name="nome" value="{{ espaco.nome }}" required />
+              <input type="text" id="nome" name="nome" value="{{ form_data.get('nome', espaco.nome) }}" required />
             </div>
 
             <div class="spaces-form__field">
               <label for="modalidade">Modalidade</label>
-              <input type="text" id="modalidade" name="modalidade" value="{{ espaco.modalidade or '' }}" required />
+              <input type="text" id="modalidade" name="modalidade" value="{{ form_data.get('modalidade', espaco.modalidade or '') }}" required />
             </div>
 
             <div class="spaces-form__field">
               <label for="descricao">Descrição</label>
-              <input type="text" id="descricao" name="descricao" value="{{ espaco.descricao }}" />
+              <input type="text" id="descricao" name="descricao" value="{{ form_data.get('descricao', espaco.descricao) }}" />
             </div>
 
             <div class="spaces-form__field">
               <label for="preco">Preço por hora</label>
-              <input type="number" id="preco" name="preco" value="{{ espaco.precoHora }}" required />
+              <input type="number" id="preco" name="preco" value="{{ form_data.get('preco', espaco.precoHora) }}" required />
             </div>
 
             <div class="spaces-form__media">
@@ -106,5 +109,7 @@
         </article>
       </section>
     </div>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>
   </body>
 </html>

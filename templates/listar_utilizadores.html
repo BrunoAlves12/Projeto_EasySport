@@ -6,10 +6,20 @@
 
 <br /><br />
 
-{% with messages = get_flashed_messages() %} {% if messages %} {% for message in
-messages %}
-<p style="color: green">{{ message }}</p>
-{% endfor %} {% endif %} {% endwith %}
+{% with messages = get_flashed_messages(with_categories=True) %} {% if messages %}
+<div class="flash-stack" style="max-width: 540px; margin-bottom: 16px">
+  {% for category, message in messages %}
+  <div
+    class="flash-message"
+    data-flash-message
+    style="padding: 12px 14px; border-radius: 12px; border: 1px solid {% if category == 'success' %}rgba(106, 154, 121, 0.3){% else %}rgba(216, 139, 116, 0.3){% endif %}; background: {% if category == 'success' %}rgba(106, 154, 121, 0.14){% else %}rgba(216, 139, 116, 0.14){% endif %}; color: {% if category == 'success' %}#2d6944{% else %}#8b523f{% endif %};"
+  >
+    <span class="flash-message__text">{{ message }}</span>
+    <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %} {% endwith %}
 
 <table border="1" cellpadding="10">
   <tr>
@@ -48,3 +58,4 @@ messages %}
   </tr>
   {% endfor %}
 </table>
+<script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>

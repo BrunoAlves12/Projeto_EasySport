@@ -30,5 +30,5 @@ def pagar(pagamento_id):
 
     db.session.commit()
 
-    flash("Pagamento realizado com sucesso")
+    flash("Pagamento realizado com sucesso", "success")
     return redirect(url_for("pagamentos.listar_pagamentos"))

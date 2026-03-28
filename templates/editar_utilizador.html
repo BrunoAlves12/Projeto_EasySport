@@ -1,20 +1,30 @@
 <h1>Editar Utilizador</h1>
 
-{% with messages = get_flashed_messages() %} {% if messages %} {% for message in
-messages %}
-<p style="color: red">{{ message }}</p>
-{% endfor %} {% endif %} {% endwith %}
+{% with messages = get_flashed_messages(with_categories=True) %} {% if messages %}
+<div class="flash-stack" style="max-width: 540px; margin-bottom: 16px">
+  {% for category, message in messages %}
+  <div
+    class="flash-message"
+    data-flash-message
+    style="padding: 12px 14px; border-radius: 12px; border: 1px solid {% if category == 'success' %}rgba(106, 154, 121, 0.3){% else %}rgba(216, 139, 116, 0.3){% endif %}; background: {% if category == 'success' %}rgba(106, 154, 121, 0.14){% else %}rgba(216, 139, 116, 0.14){% endif %}; color: {% if category == 'success' %}#2d6944{% else %}#8b523f{% endif %};"
+  >
+    <span class="flash-message__text">{{ message }}</span>
+    <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %} {% endwith %}
 
-<form method="POST" action="{{ url_for('main.editar_utilizador', user_id=user.id) }}">
-  <input type="text" name="nome" value="{{ user.nome }}" required><br><br>
+<form method="POST" action="{{ url_for('main.editar_utilizador', user_id=user.id) }}" data-custom-validation="true" data-validation-stack-class="flash-stack" data-validation-alert-class="flash-message">
+  <input type="text" name="nome" value="{{ form_data.get('nome', user.nome) }}" required><br><br>
 
-  <input type="text" name="username" value="{{ user.username }}" required><br><br>
+  <input type="text" name="username" value="{{ form_data.get('username', user.username) }}" required><br><br>
 
-  <input type="email" name="email" value="{{ user.email }}" required><br><br>
+  <input type="email" name="email" value="{{ form_data.get('email', user.email) }}" required><br><br>
 
   <select name="estado" id="estado" style="width:180px">
-    <option value="ativo" {% if user.estado.value == "ativo" %}selected{% endif %}>Ativo</option>
-    <option value="inativo" {% if user.estado.value == "inativo" %}selected{% endif %}>Inativo</option>
+    <option value="ativo" {% if form_data.get('estado', user.estado.value) == "ativo" %}selected{% endif %}>Ativo</option>
+    <option value="inativo" {% if form_data.get('estado', user.estado.value) == "inativo" %}selected{% endif %}>Inativo</option>
   </select><br><br>
 
   <button type="submit">Guardar alterações</button>
@@ -22,3 +32,5 @@ messages %}
       <button type="button">Cancelar</button>
     </a>
 </form>
+<script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
+<script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>

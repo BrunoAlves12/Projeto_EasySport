@@ -226,6 +226,18 @@ body.home-page {
   text-align: right;
 }
 
+.home-profile-alert--success {
+  background: rgba(106, 154, 121, 0.14);
+  border-color: rgba(106, 154, 121, 0.22);
+  color: #2d6944;
+}
+
+.home-profile-alert--danger {
+  background: rgba(216, 139, 116, 0.14);
+  border-color: rgba(216, 139, 116, 0.22);
+  color: #8b523f;
+}
+
 .home-button {
   min-height: 46px;
   padding: 0 22px;
@@ -308,6 +320,18 @@ body.home-page {
   background: rgba(143, 167, 181, 0.16);
   border: 1px solid rgba(143, 167, 181, 0.25);
   color: #29485a;
+}
+
+.home-alert--success {
+  background: rgba(106, 154, 121, 0.14);
+  border-color: rgba(106, 154, 121, 0.22);
+  color: #2d6944;
+}
+
+.home-alert--danger {
+  background: rgba(216, 139, 116, 0.14);
+  border-color: rgba(216, 139, 116, 0.22);
+  color: #8b523f;
 }
 
 .home-space-grid {

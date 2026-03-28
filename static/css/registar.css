@@ -78,6 +78,18 @@ body.auth-page {
   font-size: 0.96rem;
 }
 
+.auth-alert--success {
+  border-color: rgba(106, 154, 121, 0.3);
+  background: rgba(106, 154, 121, 0.14);
+  color: #2d6944;
+}
+
+.auth-alert--danger {
+  border-color: rgba(216, 139, 116, 0.28);
+  background: var(--auth-accent-soft);
+  color: #7d3e2f;
+}
+
 .auth-form {
   display: grid;
   gap: 18px;

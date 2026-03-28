@@ -273,6 +273,18 @@
   color: #8b523f;
 }
 
+.reserve-alert--success {
+  background: rgba(106, 154, 121, 0.14);
+  border-color: rgba(106, 154, 121, 0.22);
+  color: #2d6944;
+}
+
+.reserve-alert--danger {
+  background: rgba(216, 139, 116, 0.12);
+  border-color: rgba(216, 139, 116, 0.18);
+  color: #8b523f;
+}
+
 .reserve-main {
   padding-top: 26px;
 }

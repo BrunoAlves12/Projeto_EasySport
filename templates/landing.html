@@ -16,6 +16,19 @@
 
   <body class="landing-page">
     <div class="landing-shell">
+      {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+          <div class="landing-messages flash-stack">
+            {% for category, message in messages %}
+              <div class="landing-alert landing-alert--{{ category }} flash-message" data-flash-message>
+                <span class="flash-message__text">{{ message }}</span>
+                <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
       <header class="landing-header">
         <a class="landing-brand" href="{{ url_for('main.index') }}">
           <img
@@ -85,5 +98,6 @@
         <p>EasySport, reservas desportivas com uma experiência simples e moderna.</p>
       </footer>
     </div>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
   </body>
 </html>

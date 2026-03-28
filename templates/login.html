@@ -29,20 +29,23 @@
           </p> -->
         </div>
 
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=True) %}
           {% if messages %}
-            <div class="auth-messages">
-              {% for message in messages %}
-                <p class="auth-alert">{{ message }}</p>
+            <div class="auth-messages flash-stack">
+              {% for category, message in messages %}
+                <div class="auth-alert auth-alert--{{ category }} flash-message" data-flash-message>
+                  <span class="flash-message__text">{{ message }}</span>
+                  <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+                </div>
               {% endfor %}
             </div>
           {% endif %}
         {% endwith %}
 
-        <form class="auth-form" action="/login" method="post">
+        <form class="auth-form" action="/login" method="post" data-custom-validation="true" data-validation-stack-class="auth-messages flash-stack" data-validation-alert-class="auth-alert auth-alert--danger flash-message">
           <div class="auth-field">
             <label for="username">Username</label>
-            <input id="username" type="text" name="username" placeholder="Username" required />
+            <input id="username" type="text" name="username" placeholder="Username" value="{{ form_data.get('username', '') }}" required />
           </div>
 
           <div class="auth-field">
@@ -59,5 +62,7 @@
         </div>
       </section>
     </main>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>
   </body>
 </html>
