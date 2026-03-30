@@ -1,61 +1,169 @@
-<h1>Lista de Utilizadores</h1>
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerir utilizadores | EasySport</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/users.css') }}" />
+  </head>
+  <body class="admin-page users-page">
+    <div class="admin-shell">
+      <header class="admin-header">
+        <a class="admin-brand" href="{{ url_for('main.admin_dashboard') }}">
+          <img
+            class="admin-brand__logo"
+            src="{{ url_for('static', filename='img/easysport-logo.png') }}"
+            alt="Logo EasySport"
+          />
+          <div>
+            <p class="admin-brand__eyebrow">Painel de utilizadores</p>
+            <h1>EasySport</h1>
+          </div>
+        </a>
 
-<a href="/">
-  <button>Voltar ao Menu</button>
-</a>
+        <div class="spaces-header__actions">
+          <div class="admin-userpanel">
+            <details class="admin-profile-menu">
+              <summary class="admin-profile-button">
+                <span class="admin-profile-avatar" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 12a4.25 4.25 0 1 0-4.25-4.25A4.25 4.25 0 0 0 12 12Zm0 2.25c-4.23 0-7.75 2.16-7.75 4.75a1 1 0 0 0 1 1h13.5a1 1 0 0 0 1-1c0-2.59-3.52-4.75-7.75-4.75Z" />
+                  </svg>
+                </span>
+                <span class="admin-profile-content">
+                  <span class="admin-profile-label">Administrador</span>
+                  <strong>{{ session["username"] }}</strong>
+                </span>
+                <span class="admin-profile-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" focusable="false">
+                    <path d="m5.25 7.5 4.75 5 4.75-5" />
+                  </svg>
+                </span>
+              </summary>
 
-<br /><br />
+              <div class="admin-profile-dropdown">
+                <a class="admin-profile-link" href="{{ url_for('main.admin_dashboard') }}">Painel principal</a>
+                <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Gerir espacos</a>
+                <a class="admin-profile-link" href="{{ url_for('reservas.listar_reservas') }}">Consultar reservas</a>
+                <a class="admin-profile-link" href="{{ url_for('pagamentos.listar_pagamentos') }}">Consultar pagamentos</a>
+                <a class="admin-profile-link admin-profile-link--logout" href="{{ url_for('auth.logout') }}">Logout</a>
+              </div>
+            </details>
+          </div>
+        </div>
+      </header>
 
-{% with messages = get_flashed_messages(with_categories=True) %} {% if messages %}
-<div class="flash-stack" style="max-width: 540px; margin-bottom: 16px">
-  {% for category, message in messages %}
-  <div
-    class="flash-message"
-    data-flash-message
-    style="padding: 12px 14px; border-radius: 12px; border: 1px solid {% if category == 'success' %}rgba(106, 154, 121, 0.3){% else %}rgba(216, 139, 116, 0.3){% endif %}; background: {% if category == 'success' %}rgba(106, 154, 121, 0.14){% else %}rgba(216, 139, 116, 0.14){% endif %}; color: {% if category == 'success' %}#2d6944{% else %}#8b523f{% endif %};"
-  >
-    <span class="flash-message__text">{{ message }}</span>
-    <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
-  </div>
-  {% endfor %}
-</div>
-{% endif %} {% endwith %}
+      {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+          <div class="admin-messages flash-stack">
+            {% for category, message in messages %}
+              <div class="admin-alert admin-alert--{{ category }} flash-message" data-flash-message>
+                <span class="flash-message__text">{{ message }}</span>
+                <button class="flash-message__close" type="button" aria-label="Fechar notificacao" data-flash-close>&times;</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
 
-<table border="1" cellpadding="10">
-  <tr>
-    <th>ID</th>
-    <th>Nome</th>
-    <th>Username</th>
-    <th>Email</th>
-    <th>Estado</th>
-    <th>Ações</th>
-  </tr>
+      <main class="admin-main users-main users-main--spaced">
+        <section class="admin-section">
+          <div class="users-summary-grid">
+            <article class="users-summary-card">
+              <span class="users-summary-card__label">Total de utilizadores</span>
+              <strong class="users-summary-card__value">{{ users|length }}</strong>
+            </article>
+            <article class="users-summary-card">
+              <span class="users-summary-card__label">Contas ativas</span>
+              <strong class="users-summary-card__value">{{ total_ativos }}</strong>
+            </article>
+            <article class="users-summary-card">
+              <span class="users-summary-card__label">Contas inativas</span>
+              <strong class="users-summary-card__value">{{ total_inativos }}</strong>
+            </article>
+          </div>
+        </section>
 
-  {% for user in users %}
-  <tr>
-    <td>{{ user.id }}</td>
-    <td>{{ user.nome }}</td>
-    <td>{{ user.username }}</td>
-    <td>{{ user.email }}</td>
-    <td>{{ user.estado.value }}</td>
+        <section class="admin-section">
+          <div class="admin-section__header">
+            <div>
+              <p class="admin-section__eyebrow">Lista</p>
+              <h3>Utilizadores registados</h3>
+            </div>
+          </div>
 
-    <td>
-      <a href="/editar-utilizador/{{ user.id }}">
-        <button>Editar</button>
-      </a>
+          {% if users %}
+            <div class="users-grid">
+              {% for user in users %}
+                <article class="users-card">
+                  <div class="users-card__top">
+                    <div>
+                      <p class="users-card__eyebrow">ID {{ user.id }}</p>
+                      <h4>{{ user.nome }}</h4>
+                    </div>
+                    <span class="users-status-badge users-status-badge--{{ user.estado.value }}">{{ user.estado.value }}</span>
+                  </div>
 
-      <form action="/remover-utilizador/{{ user.id }}" method="post">
-        <button
-          type="submit"
-          onclick="
-            return confirm('Tem a certeza que quer remover este utilizador?');
-          "
-        >
-          Remover
-        </button>
-      </form>
-    </td>
-  </tr>
-  {% endfor %}
-</table>
-<script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
+                  <div class="users-card__details">
+                    <div class="users-card__detail">
+                      <span class="users-card__label">Username</span>
+                      <strong>{{ user.username }}</strong>
+                    </div>
+                    <div class="users-card__detail">
+                      <span class="users-card__label">Email</span>
+                      <strong>{{ user.email }}</strong>
+                    </div>
+                    <div class="users-card__detail">
+                      <span class="users-card__label">Nascimento</span>
+                      <strong>{{ user.dataNascimento.strftime('%d/%m/%Y') if user.dataNascimento else '-' }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="users-card__actions">
+                    <a class="users-button users-button--secondary" href="{{ url_for('main.editar_utilizador_page', user_id=user.id) }}">
+                      Editar
+                    </a>
+
+                    <form method="POST" action="{{ url_for('main.alterar_estado_utilizador', user_id=user.id) }}">
+                      <input type="hidden" name="estado" value="{% if user.estado.value == 'ativo' %}inativo{% else %}ativo{% endif %}" />
+                      <button
+                        class="users-button {% if user.estado.value == 'ativo' %}users-button--danger{% else %}users-button--success{% endif %}"
+                        type="submit"
+                      >
+                        {% if user.estado.value == 'ativo' %}Inativar{% else %}Ativar{% endif %}
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+          {% else %}
+            <article class="users-empty-state">
+              <p class="users-empty-state__eyebrow">Sem registos</p>
+              <h3>Ainda nao existem utilizadores para apresentar</h3>
+              <p>Quando surgirem novos registos, eles aparecem aqui com o respetivo estado da conta.</p>
+            </article>
+          {% endif %}
+        </section>
+      </main>
+    </div>
+    <script>
+      (() => {
+        const profileMenu = document.querySelector(".admin-profile-menu");
+
+        if (!profileMenu) {
+          return;
+        }
+
+        document.addEventListener("click", (event) => {
+          if (!profileMenu.contains(event.target)) {
+            profileMenu.removeAttribute("open");
+          }
+        });
+      })();
+    </script>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
+  </body>
+</html>

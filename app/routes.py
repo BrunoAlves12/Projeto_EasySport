@@ -1,11 +1,12 @@
 import os
 import random
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
-from flask import Blueprint, current_app, redirect, render_template, url_for, flash, request, session
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 
-from app.models import EstadoUser, User, Reserva, Espaco, Pagamento
+from app.auth import _validar_password
 from app.extensions import db
+from app.models import EstadoReserva, EstadoUser, Espaco, Pagamento, Reserva, User
 
 main_bp = Blueprint("main", __name__)
 
@@ -24,8 +25,8 @@ def _espacos_homepage():
         caminho_imagem = os.path.join(current_app.static_folder, imagem.replace("/", os.sep))
 
         espaco.imagem_homepage = imagem if os.path.exists(caminho_imagem) else current_app.config["ESPACO_IMAGEM_DEFAULT"]
-        espaco.modalidade_homepage = (espaco.modalidade or "Espaço desportivo").strip()
-        espaco.descricao_curta = (espaco.descricao or "Espaço pronto para reserva.").strip()
+        espaco.modalidade_homepage = (espaco.modalidade or "Espaco desportivo").strip()
+        espaco.descricao_curta = (espaco.descricao or "Espaco pronto para reserva.").strip()
 
     return espacos_destaque, len(espacos) > quantidade
 
@@ -38,7 +39,77 @@ def _get_current_user():
 
 
 def _render_editar_utilizador_form(user, form_data=None):
-    return render_template("editar_utilizador.html", user=user, form_data=form_data or {})
+    is_self_edit = session.get("user_id") == user.id
+    is_admin_editing_other = session.get("is_admin") and not is_self_edit
+
+    return render_template(
+        "editar_utilizador.html",
+        user=user,
+        form_data=form_data or {},
+        is_self_edit=is_self_edit,
+        is_admin_editing_other=is_admin_editing_other,
+    )
+
+
+def _parse_data_nascimento(data_str):
+    try:
+        return datetime.strptime(data_str, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _email_e_valido(email):
+    if "@" not in email:
+        return False
+
+    partes = email.split("@")
+    return len(partes) == 2 and "." in partes[1]
+
+
+def _normalizar_estado_utilizador(estado):
+    return EstadoUser.ativo if estado == "ativo" else EstadoUser.inativo
+
+
+def _obter_reservas_ativas_do_utilizador(user_id):
+    agora = datetime.now()
+    return Reserva.query.filter(
+        Reserva.idUser == user_id,
+        Reserva.dataFim >= agora,
+        Reserva.estado.in_([EstadoReserva.pendente, EstadoReserva.confirmada]),
+    ).all()
+
+
+def _pode_inativar_conta(user):
+    reservas_ativas = _obter_reservas_ativas_do_utilizador(user.id)
+    reservas_confirmadas = [reserva for reserva in reservas_ativas if reserva.estado == EstadoReserva.confirmada]
+
+    if reservas_confirmadas:
+        return False, "Nao e possivel inativar a conta porque existem reservas confirmadas."
+
+    reservas_pendentes = [reserva for reserva in reservas_ativas if reserva.estado == EstadoReserva.pendente]
+
+    for reserva in reservas_pendentes:
+        reserva.estado = EstadoReserva.cancelada
+        pagamento = Pagamento.query.filter_by(idReserva=reserva.id).first()
+
+        if pagamento and pagamento.estado != "pago":
+            pagamento.estado = "cancelado"
+            pagamento.dataPagamento = None
+
+    return True, None
+
+
+def _build_user_form_data(user, form_data):
+    return {
+        "nome": form_data.get("nome", user.nome),
+        "username": form_data.get("username", user.username),
+        "email": form_data.get("email", user.email),
+        "dataNascimento": form_data.get(
+            "dataNascimento",
+            user.dataNascimento.isoformat() if user.dataNascimento else "",
+        ),
+        "estado": form_data.get("estado", user.estado.value),
+    }
 
 
 @main_bp.route("/", methods=["GET", "POST"])
@@ -67,7 +138,7 @@ def espacos_homepage():
         "index.html",
         espacos_destaque=espacos_destaque,
         mostrar_botao_mais_espacos=mostrar_botao_mais_espacos,
-        current_user=current_user
+        current_user=current_user,
     )
 
 
@@ -88,12 +159,18 @@ def admin_dashboard():
 
     reservas_hoje = Reserva.query.filter(
         Reserva.dataInicio >= inicio_hoje,
-        Reserva.dataInicio < inicio_amanha
+        Reserva.dataInicio < inicio_amanha,
     ).count()
 
     utilizadores_recentes = User.query.filter_by(isAdmin=False).order_by(User.id.desc()).limit(3).all()
     espacos_ativos = Espaco.query.filter_by(ativo=True).count()
-    pagamentos_pendentes = Pagamento.query.filter_by(estado="pendente").count()
+    pagamentos_pendentes = Pagamento.query.join(
+        Reserva,
+        Pagamento.idReserva == Reserva.id,
+    ).filter(
+        Pagamento.estado == "pendente",
+        Reserva.estado == EstadoReserva.pendente,
+    ).count()
 
     recent_names = ", ".join(user.nome for user in reversed(utilizadores_recentes))
     if not recent_names:
@@ -103,7 +180,7 @@ def admin_dashboard():
         {
             "titulo": "Reservas para hoje",
             "valor": reservas_hoje,
-            "detalhe": "Reservas com início marcado para hoje.",
+            "detalhe": "Reservas com inicio marcado para hoje.",
             "icone": "calendar",
         },
         {
@@ -113,9 +190,9 @@ def admin_dashboard():
             "icone": "users",
         },
         {
-            "titulo": "Espaços ativos",
+            "titulo": "Espacos ativos",
             "valor": espacos_ativos,
-            "detalhe": "Espaços atualmente disponíveis na plataforma.",
+            "detalhe": "Espacos atualmente disponiveis na plataforma.",
             "icone": "spaces",
         },
         {
@@ -135,10 +212,10 @@ def admin_dashboard():
             "icone": "users",
         },
         {
-            "titulo": "Gerir espaços",
-            "texto": "Adiciona novos espaços e controla a disponibilidade dos espaços existentes.",
+            "titulo": "Gerir espacos",
+            "texto": "Adiciona novos espacos e controla a disponibilidade dos espacos existentes.",
             "rota": url_for("main.listar_espacos_page"),
-            "botao": "Abrir espaços",
+            "botao": "Abrir espacos",
             "icone": "spaces",
         },
         {
@@ -150,7 +227,7 @@ def admin_dashboard():
         },
         {
             "titulo": "Consultar pagamentos",
-            "texto": "Revê pagamentos associados às reservas e acompanha o estado financeiro.",
+            "texto": "Reve pagamentos associados as reservas e acompanha o estado financeiro.",
             "rota": url_for("pagamentos.listar_pagamentos"),
             "botao": "Ver pagamentos",
             "icone": "payments",
@@ -161,7 +238,7 @@ def admin_dashboard():
         "admin.html",
         current_user=current_user,
         summary_cards=summary_cards,
-        admin_links=admin_links
+        admin_links=admin_links,
     )
 
 
@@ -198,29 +275,16 @@ def listar_utilizadores():
         flash("Acesso restrito ao administrador", "danger")
         return redirect(url_for("main.index"))
 
-    users = User.query.filter_by(isAdmin=False).all()
+    users = User.query.filter_by(isAdmin=False).order_by(User.nome.asc()).all()
+    total_ativos = sum(1 for user in users if user.estado == EstadoUser.ativo)
+    total_inativos = len(users) - total_ativos
 
-    return render_template("listar_utilizadores.html", users=users)
-
-
-@main_bp.route("/remover-utilizador/<int:user_id>", methods=["POST"])
-def remover_utilizador(user_id):
-    if "user_id" not in session:
-        flash("Tem de fazer login primeiro", "danger")
-        return redirect(url_for("auth.login_page"))
-
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador", "danger")
-        return redirect(url_for("main.index"))
-
-    user = User.query.get_or_404(user_id)
-
-    db.session.delete(user)
-    db.session.commit()
-
-    flash("Utilizador removido com sucesso!", "success")
-
-    return redirect(url_for("main.listar_utilizadores"))
+    return render_template(
+        "listar_utilizadores.html",
+        users=users,
+        total_ativos=total_ativos,
+        total_inativos=total_inativos,
+    )
 
 
 @main_bp.route("/perfil-utilizador")
@@ -230,8 +294,7 @@ def perfil_utilizador():
         return redirect(url_for("auth.login_page"))
 
     user = User.query.get(session["user_id"])
-
-    return _render_editar_utilizador_form(user)
+    return _render_editar_utilizador_form(user, _build_user_form_data(user, {}))
 
 
 @main_bp.route("/editar-utilizador/<int:user_id>")
@@ -245,8 +308,7 @@ def editar_utilizador_page(user_id):
         return redirect(url_for("main.index"))
 
     user = User.query.get_or_404(user_id)
-
-    return _render_editar_utilizador_form(user)
+    return _render_editar_utilizador_form(user, _build_user_form_data(user, {}))
 
 
 @main_bp.route("/editar-utilizador/<int:user_id>", methods=["POST"])
@@ -261,61 +323,136 @@ def editar_utilizador(user_id):
         flash("Acesso restrito", "danger")
         return redirect(url_for("main.index"))
 
+    is_self_edit = session["user_id"] == user.id
     nome = request.form.get("nome", "").strip()
     username = request.form.get("username", "").strip()
     email = request.form.get("email", "").strip()
+    data_str = request.form.get("dataNascimento", "").strip()
     estado = request.form.get("estado", "").strip()
+    nova_password = request.form.get("password", "")
+
     form_data = {
         "nome": nome,
         "username": username,
         "email": email,
+        "dataNascimento": data_str,
         "estado": estado,
     }
 
-    if not nome or not username or not email or not estado:
-        flash("Todos os campos são obrigatórios", "danger")
+    if not nome or not username or not email or not data_str or not estado:
+        flash("Todos os campos obrigatorios devem ser preenchidos.", "danger")
         return _render_editar_utilizador_form(user, form_data)
 
-    existe_username = User.query.filter(
-        User.username == username,
-        User.id != user.id
-    ).first()
+    if estado not in {"ativo", "inativo"}:
+        flash("Estado invalido.", "danger")
+        return _render_editar_utilizador_form(user, form_data)
 
+    data_nascimento = _parse_data_nascimento(data_str)
+    if data_nascimento is None:
+        flash("Data de nascimento invalida.", "danger")
+        return _render_editar_utilizador_form(user, form_data)
+
+    if data_nascimento > date.today():
+        flash("Data de nascimento invalida.", "danger")
+        return _render_editar_utilizador_form(user, form_data)
+
+    if not _email_e_valido(email):
+        flash("Email invalido.", "danger")
+        return _render_editar_utilizador_form(user, form_data)
+
+    existe_username = User.query.filter(User.username == username, User.id != user.id).first()
     if existe_username:
-        flash("Username já existe", "danger")
+        flash("Username ja existe.", "danger")
         return _render_editar_utilizador_form(user, form_data)
 
-    existe_email = User.query.filter(
-        User.email == email,
-        User.id != user.id
-    ).first()
-
+    existe_email = User.query.filter(User.email == email, User.id != user.id).first()
     if existe_email:
-        flash("Email já existe", "danger")
+        flash("Email ja existe.", "danger")
         return _render_editar_utilizador_form(user, form_data)
+
+    if not is_self_edit:
+        nova_password = ""
+
+    if nova_password:
+        password_error = _validar_password(nova_password)
+        if password_error:
+            flash(password_error, "danger")
+            return _render_editar_utilizador_form(user, form_data)
+
+    estado_atual = user.estado
+    novo_estado = _normalizar_estado_utilizador(estado)
 
     user.nome = nome
     user.username = username
     user.email = email
+    user.dataNascimento = data_nascimento
 
-    if estado == "ativo":
-        user.estado = EstadoUser.ativo
-    else:
-        user.estado = EstadoUser.inativo
+    if nova_password:
+        user.password = nova_password
 
+    if estado_atual != EstadoUser.inativo and novo_estado == EstadoUser.inativo:
+        pode_inativar, mensagem = _pode_inativar_conta(user)
+
+        if not pode_inativar:
+            db.session.rollback()
+            flash(mensagem, "danger")
+            return _render_editar_utilizador_form(user, form_data)
+
+    user.estado = novo_estado
     db.session.commit()
 
-    if not session.get("is_admin") and session["user_id"] == user.id and user.estado == EstadoUser.inativo:
+    if is_self_edit:
+        session["username"] = user.username
+
+    if is_self_edit and user.estado == EstadoUser.inativo:
         session.clear()
-        flash("Conta desativada com sucesso.", "success")
+        flash("Conta inativada com sucesso.", "success")
         return redirect(url_for("main.index"))
 
     flash("Utilizador atualizado com sucesso!", "success")
 
     if session.get("is_admin"):
+        return redirect(url_for("main.editar_utilizador_page", user_id=user.id))
+
+    return redirect(url_for("main.perfil_utilizador"))
+
+
+@main_bp.route("/alterar-estado-utilizador/<int:user_id>", methods=["POST"])
+def alterar_estado_utilizador(user_id):
+    if "user_id" not in session:
+        flash("Tem de fazer login primeiro", "danger")
+        return redirect(url_for("auth.login_page"))
+
+    if not session.get("is_admin"):
+        flash("Acesso restrito ao administrador", "danger")
+        return redirect(url_for("main.index"))
+
+    user = User.query.get_or_404(user_id)
+    novo_estado = request.form.get("estado", "").strip()
+
+    if novo_estado not in {"ativo", "inativo"}:
+        flash("Estado invalido.", "danger")
         return redirect(url_for("main.listar_utilizadores"))
 
-    return redirect(url_for("main.index"))
+    estado_enum = _normalizar_estado_utilizador(novo_estado)
+    if user.estado == estado_enum:
+        return redirect(url_for("main.listar_utilizadores"))
+
+    if estado_enum == EstadoUser.inativo:
+        pode_inativar, mensagem = _pode_inativar_conta(user)
+        if not pode_inativar:
+            db.session.rollback()
+            flash(mensagem, "danger")
+            return redirect(url_for("main.listar_utilizadores"))
+
+    user.estado = estado_enum
+    db.session.commit()
+
+    flash(
+        "Conta ativada com sucesso." if user.estado == EstadoUser.ativo else "Conta inativada com sucesso.",
+        "success",
+    )
+    return redirect(url_for("main.listar_utilizadores"))
 
 
 @main_bp.route("/reservar-page")

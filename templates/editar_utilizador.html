@@ -1,36 +1,171 @@
-<h1>Editar Utilizador</h1>
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Editar utilizador | EasySport</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/users.css') }}" />
+  </head>
+  <body class="admin-page users-page">
+    <div class="admin-shell">
+      <header class="admin-header">
+        <a class="admin-brand" href="{% if session.get('is_admin') %}{{ url_for('main.admin_dashboard') }}{% else %}{{ url_for('main.espacos_homepage') }}{% endif %}">
+          <img
+            class="admin-brand__logo"
+            src="{{ url_for('static', filename='img/easysport-logo.png') }}"
+            alt="Logo EasySport"
+          />
+          <div>
+            <p class="admin-brand__eyebrow">{% if session.get('is_admin') %}Gestao de utilizadores{% else %}Perfil do utilizador{% endif %}</p>
+            <h1>EasySport</h1>
+          </div>
+        </a>
 
-{% with messages = get_flashed_messages(with_categories=True) %} {% if messages %}
-<div class="flash-stack" style="max-width: 540px; margin-bottom: 16px">
-  {% for category, message in messages %}
-  <div
-    class="flash-message"
-    data-flash-message
-    style="padding: 12px 14px; border-radius: 12px; border: 1px solid {% if category == 'success' %}rgba(106, 154, 121, 0.3){% else %}rgba(216, 139, 116, 0.3){% endif %}; background: {% if category == 'success' %}rgba(106, 154, 121, 0.14){% else %}rgba(216, 139, 116, 0.14){% endif %}; color: {% if category == 'success' %}#2d6944{% else %}#8b523f{% endif %};"
-  >
-    <span class="flash-message__text">{{ message }}</span>
-    <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
-  </div>
-  {% endfor %}
-</div>
-{% endif %} {% endwith %}
+        <div class="spaces-header__actions">
+          <div class="admin-userpanel">
+            <details class="admin-profile-menu">
+              <summary class="admin-profile-button">
+                <span class="admin-profile-avatar" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 12a4.25 4.25 0 1 0-4.25-4.25A4.25 4.25 0 0 0 12 12Zm0 2.25c-4.23 0-7.75 2.16-7.75 4.75a1 1 0 0 0 1 1h13.5a1 1 0 0 0 1-1c0-2.59-3.52-4.75-7.75-4.75Z" />
+                  </svg>
+                </span>
+                <span class="admin-profile-content">
+                  <span class="admin-profile-label">{% if session.get('is_admin') %}Administrador{% else %}Utilizador{% endif %}</span>
+                  <strong>{{ session["username"] }}</strong>
+                </span>
+                <span class="admin-profile-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" focusable="false">
+                    <path d="m5.25 7.5 4.75 5 4.75-5" />
+                  </svg>
+                </span>
+              </summary>
 
-<form method="POST" action="{{ url_for('main.editar_utilizador', user_id=user.id) }}" data-custom-validation="true" data-validation-stack-class="flash-stack" data-validation-alert-class="flash-message">
-  <input type="text" name="nome" value="{{ form_data.get('nome', user.nome) }}" required><br><br>
+              <div class="admin-profile-dropdown">
+                {% if session.get('is_admin') %}
+                  <a class="admin-profile-link" href="{{ url_for('main.admin_dashboard') }}">Painel principal</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.listar_utilizadores') }}">Gerir utilizadores</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Gerir espacos</a>
+                  <a class="admin-profile-link" href="{{ url_for('reservas.listar_reservas') }}">Consultar reservas</a>
+                {% else %}
+                  <a class="admin-profile-link" href="{{ url_for('main.espacos_homepage') }}">Inicio</a>
+                  <a class="admin-profile-link" href="{{ url_for('reservas.minha_reservas') }}">As minhas reservas</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Ver espa&ccedil;os</a>
+                {% endif %}
+                <a class="admin-profile-link admin-profile-link--logout" href="{{ url_for('auth.logout') }}">Logout</a>
+              </div>
+            </details>
+          </div>
+        </div>
+      </header>
 
-  <input type="text" name="username" value="{{ form_data.get('username', user.username) }}" required><br><br>
+      {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+          <div class="admin-messages flash-stack">
+            {% for category, message in messages %}
+              <div class="admin-alert admin-alert--{{ category }} flash-message" data-flash-message>
+                <span class="flash-message__text">{{ message }}</span>
+                <button class="flash-message__close" type="button" aria-label="Fechar notificacao" data-flash-close>&times;</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
 
-  <input type="email" name="email" value="{{ form_data.get('email', user.email) }}" required><br><br>
+      <main class="admin-main users-main users-main--spaced">
+        <section class="users-form-section">
+          <article class="users-form-card">
+            <div class="users-form-card__header">
+              <div>
+                <p class="admin-section__eyebrow">Os teus dados</p>
+                <h3>{{ user.nome }}</h3>
+              </div>
+            </div>
 
-  <select name="estado" id="estado" style="width:180px">
-    <option value="ativo" {% if form_data.get('estado', user.estado.value) == "ativo" %}selected{% endif %}>Ativo</option>
-    <option value="inativo" {% if form_data.get('estado', user.estado.value) == "inativo" %}selected{% endif %}>Inativo</option>
-  </select><br><br>
+            <form
+              class="users-form"
+              method="POST"
+              action="{{ url_for('main.editar_utilizador', user_id=user.id) }}"
+              data-custom-validation="true"
+              data-validation-stack-class="admin-messages flash-stack"
+              data-validation-alert-class="admin-alert admin-alert--danger flash-message"
+            >
+              <div class="users-form-grid">
+                <div class="users-form__field">
+                  <label for="nome">Nome</label>
+                  <input id="nome" type="text" name="nome" value="{{ form_data.get('nome', user.nome) }}" required />
+                </div>
 
-  <button type="submit">Guardar alterações</button>
-    <a href="{% if session.get('is_admin') %}{{ url_for('main.listar_utilizadores') }}{% else %}{{ url_for('main.index') }}{% endif %}">
-      <button type="button">Cancelar</button>
-    </a>
-</form>
-<script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
-<script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>
+                <div class="users-form__field">
+                  <label for="username">Username</label>
+                  <input id="username" type="text" name="username" value="{{ form_data.get('username', user.username) }}" required />
+                </div>
+
+                <div class="users-form__field">
+                  <label for="email">Email</label>
+                  <input id="email" type="email" name="email" value="{{ form_data.get('email', user.email) }}" required />
+                </div>
+
+                <div class="users-form__field">
+                  <label for="dataNascimento">Data de nascimento</label>
+                  <input
+                    id="dataNascimento"
+                    type="date"
+                    name="dataNascimento"
+                    value="{{ form_data.get('dataNascimento', user.dataNascimento.isoformat() if user.dataNascimento else '') }}"
+                    required
+                  />
+                </div>
+
+                <div class="users-form__field">
+                  <label for="estado">Estado da conta</label>
+                  <select id="estado" name="estado" required>
+                    <option value="ativo" {% if form_data.get('estado', user.estado.value) == "ativo" %}selected{% endif %}>Ativo</option>
+                    <option value="inativo" {% if form_data.get('estado', user.estado.value) == "inativo" %}selected{% endif %}>Inativo</option>
+                  </select>
+                  <p class="users-form__hint users-form__hint--aligned">
+                    Se a conta ficar inativa, reservas pendentes serao canceladas automaticamente. Reservas confirmadas impedem a inativacao.
+                  </p>
+                </div>
+
+                {% if is_self_edit %}
+                  <div class="users-form__field">
+                    <label for="password">Nova password</label>
+                    <input id="password" type="password" name="password" placeholder="Preenche apenas se quiseres alterar" />
+                    <p class="users-form__hint users-form__hint--aligned">Entre 8 e 15 caracteres, com maiuscula, minuscula, numero e caracter especial.</p>
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="users-form__actions">
+                <button class="users-button users-button--primary" type="submit">Guardar alteracoes</button>
+                <a class="users-button users-button--secondary" href="{% if session.get('is_admin') %}{{ url_for('main.listar_utilizadores') }}{% else %}{{ url_for('main.espacos_homepage') }}{% endif %}">
+                  Cancelar
+                </a>
+              </div>
+            </form>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script>
+      (() => {
+        const profileMenu = document.querySelector(".admin-profile-menu");
+
+        if (!profileMenu) {
+          return;
+        }
+
+        document.addEventListener("click", (event) => {
+          if (!profileMenu.contains(event.target)) {
+            profileMenu.removeAttribute("open");
+          }
+        });
+      })();
+    </script>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>
+  </body>
+</html>

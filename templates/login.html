@@ -44,8 +44,8 @@
 
         <form class="auth-form" action="/login" method="post" data-custom-validation="true" data-validation-stack-class="auth-messages flash-stack" data-validation-alert-class="auth-alert auth-alert--danger flash-message">
           <div class="auth-field">
-            <label for="username">Username</label>
-            <input id="username" type="text" name="username" placeholder="Username" value="{{ form_data.get('username', '') }}" required />
+            <label for="username">Username ou email</label>
+            <input id="username" type="text" name="username" placeholder="Username ou email" value="{{ form_data.get('login', '') }}" required />
           </div>
 
           <div class="auth-field">

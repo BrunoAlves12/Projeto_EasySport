@@ -106,6 +106,13 @@ body.auth-page {
   color: #41362c;
 }
 
+.auth-field__hint {
+  margin: -2px 0 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--auth-muted);
+}
+
 .auth-field input {
   width: 100%;
   min-height: 54px;

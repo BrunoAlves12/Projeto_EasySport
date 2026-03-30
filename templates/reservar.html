@@ -433,7 +433,7 @@
           }
 
           summaryHours.textContent = `${payload.espaco.horario_funcionamento.abertura} - ${payload.espaco.horario_funcionamento.fecho}`;
-          calendarStatus.textContent = "Escolhe um dia livre ou parcialmente ocupado.";
+          calendarStatus.textContent = "Escolhe um dia para a tua reserva.";
           renderCalendarDays(payload);
           updateMonthNavigation();
         } catch (error) {

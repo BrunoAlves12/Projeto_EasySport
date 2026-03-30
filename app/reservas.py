@@ -216,7 +216,7 @@ def _build_reserva_view_models(reservas, users, espacos, pagamentos):
         reservas_view.append(
             {
                 "id": reserva.id,
-                "utilizador": user.nome if user else "Utilizador removido",
+                "utilizador": user.nome if user else "Utilizador indisponivel",
                 "utilizador_username": user.username if user else "Sem username",
                 "espaco": espaco.nome if espaco else "Espaço indisponível",
                 "modalidade": (espaco.modalidade or "Espaço desportivo").strip() if espaco else "Espaço desportivo",
@@ -538,7 +538,13 @@ def pagar_reserva(reserva_id):
         flash("Acesso restrito", "danger")
         return redirect(url_for("main.index"))
 
+    pagamento = Pagamento.query.filter_by(idReserva=reserva.id).first()
+
     reserva.estado = EstadoReserva.confirmada
+
+    if pagamento:
+        pagamento.estado = "pago"
+        pagamento.dataPagamento = datetime.now()
 
     db.session.commit()
 
