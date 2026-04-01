@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gerir Espaços | EasySport</title>
+    <title>Gerir Espacos | EasySport</title>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/base.css') }}"
@@ -33,7 +33,7 @@
           />
           <div>
             <p class="admin-brand__eyebrow">
-              {% if session.get('is_admin') %}Painel de espaços{% else %}Explorar espaços{% endif %}
+              {% if session.get('is_admin') %}Painel de espacos{% else %}Explorar espacos{% endif %}
             </p>
             <h1>EasySport</h1>
           </div>
@@ -65,10 +65,9 @@
                 {% if session.get('is_admin') %}
                   <a class="admin-profile-link" href="{{ url_for('main.admin_dashboard') }}">Painel principal</a>
                   <a class="admin-profile-link" href="{{ url_for('main.listar_utilizadores') }}">Gerir utilizadores</a>
-                  <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Gerir espaços</a>
                   <a class="admin-profile-link" href="{{ url_for('reservas.listar_reservas') }}">Consultar reservas</a>
                 {% else %}
-                  <a class="admin-profile-link" href="{{ url_for('main.espacos_homepage') }}">Início</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.espacos_homepage') }}">Inicio</a>
                   <a class="admin-profile-link" href="{{ url_for('reservas.minha_reservas') }}">As minhas reservas</a>
                   <a class="admin-profile-link" href="{{ url_for('main.perfil_utilizador') }}">Perfil</a>
                 {% endif %}
@@ -85,7 +84,7 @@
             {% for category, message in messages %}
               <div class="admin-alert admin-alert--{{ category }} flash-message" data-flash-message>
                 <span class="flash-message__text">{{ message }}</span>
-                <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+                <button class="flash-message__close" type="button" aria-label="Fechar notificacao" data-flash-close>&times;</button>
               </div>
             {% endfor %}
           </div>
@@ -97,7 +96,7 @@
           <div class="admin-section__header spaces-section__header">
             <div>
               <p class="admin-section__eyebrow">Listagem</p>
-              <h3>Espaços registados</h3>
+              <h3>Espacos registados</h3>
             </div>
           </div>
 
@@ -120,13 +119,13 @@
                     <div class="spaces-card__top">
                       <div class="spaces-card__meta">
                         <span class="spaces-card__sport">{{ e.modalidade_listagem }}</span>
-                        <strong class="spaces-card__price">{{ "%.2f"|format(e.precoHora) }}€/hora</strong>
+                        <strong class="spaces-card__price">{{ "%.2f"|format(e.precoHora) }}EUR/hora</strong>
                       </div>
                       <h4>{{ e.nome }}</h4>
                     </div>
 
                     <p class="spaces-card__description">
-                      {{ e.descricao or "Sem descrição disponível." }}
+                      {{ e.descricao or "Sem descricao disponivel." }}
                     </p>
 
                     <div class="spaces-card__actions">
@@ -157,15 +156,15 @@
                     <div class="home-space-card__top">
                       <span class="home-space-card__sport">{{ e.modalidade_listagem }}</span>
                       <span class="home-space-card__status {% if e.ativo %}is-available{% else %}is-unavailable{% endif %}">
-                        {% if e.ativo %}Disponível{% else %}Indisponível{% endif %}
+                        {% if e.ativo %}Disponivel{% else %}Indisponivel{% endif %}
                       </span>
                     </div>
 
                     <strong>{{ e.nome }}</strong>
-                    <p class="home-space-card__description">{{ e.descricao or "Sem descrição disponível." }}</p>
+                    <p class="home-space-card__description">{{ e.descricao or "Sem descricao disponivel." }}</p>
 
                     <div class="home-space-card__bottom">
-                      <span class="home-space-card__price">{{ "%.2f"|format(e.precoHora) }}€/hora</span>
+                      <span class="home-space-card__price">{{ "%.2f"|format(e.precoHora) }}EUR/hora</span>
                       <span class="home-space-card__link">Reservar</span>
                     </div>
                   </div>
@@ -179,7 +178,7 @@
           <section class="admin-section spaces-toolbar-section">
             <div class="spaces-toolbar">
               <a class="spaces-button spaces-button--primary" href="{{ url_for('main.espaco_page') }}">
-                Adicionar espaço
+                Adicionar espaco
               </a>
             </div>
           </section>

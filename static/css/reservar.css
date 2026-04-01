@@ -63,6 +63,11 @@
   margin: 0;
 }
 
+.reserve-brand h1 {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  line-height: 1;
+}
+
 .reserve-profile-menu {
   position: relative;
   z-index: 30;
@@ -260,29 +265,90 @@
   box-shadow: none;
 }
 
-.reserve-messages {
+.reserve-auth-messages {
   margin-top: 20px;
 }
 
-.reserve-alert {
-  margin: 0 0 10px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(216, 139, 116, 0.12);
-  border: 1px solid rgba(216, 139, 116, 0.18);
-  color: #8b523f;
+.reserve-modal-open {
+  overflow: hidden;
 }
 
-.reserve-alert--success {
+.reserve-confirm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+}
+
+.reserve-confirm-modal[hidden] {
+  display: none;
+}
+
+.reserve-confirm-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(40, 31, 24, 0.46);
+  backdrop-filter: blur(6px);
+}
+
+.reserve-confirm-modal__dialog {
+  position: relative;
+  width: min(560px, calc(100% - 24px));
+  margin: min(16vh, 120px) auto 0;
+  padding: 28px;
+  border-radius: 30px;
+  border: 1px solid rgba(86, 71, 52, 0.1);
+  background: linear-gradient(180deg, rgba(255, 252, 246, 0.98) 0%, rgba(249, 242, 235, 0.98) 100%);
+  box-shadow: 0 24px 48px rgba(40, 31, 24, 0.22);
+  display: grid;
+  gap: 20px;
+}
+
+.reserve-confirm-modal__close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(143, 167, 181, 0.14);
+  color: #315264;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.reserve-confirm-modal__content {
+  display: grid;
+  gap: 10px;
+  padding-right: 40px;
+}
+
+.reserve-confirm-modal__content h2,
+.reserve-confirm-modal__content p {
+  margin: 0;
+}
+
+.reserve-confirm-modal__content p {
+  color: var(--auth-muted);
+  line-height: 1.7;
+}
+
+.reserve-confirm-modal__pill {
+  width: fit-content;
+  padding: 10px 14px;
+  border-radius: 999px;
   background: rgba(106, 154, 121, 0.14);
-  border-color: rgba(106, 154, 121, 0.22);
   color: #2d6944;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.reserve-alert--danger {
-  background: rgba(216, 139, 116, 0.12);
-  border-color: rgba(216, 139, 116, 0.18);
-  color: #8b523f;
+.reserve-confirm-modal__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .reserve-main {
@@ -649,6 +715,10 @@
     width: 100%;
   }
 
+  .reserve-confirm-modal__actions {
+    width: 100%;
+  }
+
   .reserve-button {
     width: 100%;
   }
@@ -656,6 +726,11 @@
   .reserve-form-card,
   .reserve-summary,
   .reserve-step {
+    padding: 22px;
+  }
+
+  .reserve-confirm-modal__dialog {
+    margin-top: 24px;
     padding: 22px;
   }
 

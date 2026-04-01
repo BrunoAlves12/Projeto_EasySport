@@ -51,7 +51,7 @@
                   </span>
                   <span class="home-profile-content">
                     <span class="home-profile-label">A minha conta</span>
-                    <strong>{{ current_user.nome if current_user else session["username"] }}</strong>
+                    <strong>{{ session["username"] }}</strong>
                   </span>
                   <span class="home-profile-chevron" aria-hidden="true">
                     <svg viewBox="0 0 20 20" focusable="false">

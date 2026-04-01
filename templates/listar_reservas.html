@@ -62,7 +62,6 @@
                   <a class="admin-profile-link" href="{{ url_for('main.admin_dashboard') }}">Painel principal</a>
                   <a class="admin-profile-link" href="{{ url_for('main.listar_utilizadores') }}">Gerir utilizadores</a>
                   <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Gerir espa&ccedil;os</a>
-                  <a class="admin-profile-link" href="{{ url_for('pagamentos.listar_pagamentos') }}">Consultar pagamentos</a>
                 {% else %}
                   <a class="admin-profile-link" href="{{ url_for('main.espacos_homepage') }}">In&iacute;cio</a>
                   <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Ver espa&ccedil;os</a>
@@ -80,7 +79,7 @@
               {% for category, message in messages %}
                 <div class="admin-alert admin-alert--{{ category }} flash-message" data-flash-message>
                   <span class="flash-message__text">{{ message }}</span>
-                  <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+                  <button class="flash-message__close" type="button" aria-label="Fechar notifica&ccedil;&atilde;o" data-flash-close>&times;</button>
                 </div>
               {% endfor %}
             </div>
@@ -130,7 +129,7 @@
                     {% if is_admin_view %}Consultar reservas{% else %}As minhas reservas{% endif %}
                   </p>
                   <h3>
-                    {% if is_admin_view %}Filtra a tua pesquisa{% else %}As tuas reservas num s&oacute; lugar{% endif %}
+                    {% if is_admin_view %}Filtra a tua pesquisa{% else %}Acompanha o estado das tuas reservas{% endif %}
                   </h3>
                 </div>
               </div>
@@ -179,122 +178,139 @@
                 </form>
               {% endif %}
 
-                {% if reservas %}
-                  <div class="reservations-table-wrap">
-                    <table class="reservations-table">
-                      <thead>
+              {% if reservas %}
+                <div class="reservations-table-wrap">
+                  <table class="reservations-table">
+                    <thead>
+                      <tr>
+                        {% if is_admin_view %}<th>Utilizador</th>{% endif %}
+                        <th>Espa&ccedil;o</th>
+                        <th>Modalidade</th>
+                        <th>Data</th>
+                        <th>In&iacute;cio</th>
+                        <th>Fim</th>
+                        <th>Estado</th>
+                        <th>Pagamento</th>
+                        <th>A&ccedil;&otilde;es</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for reserva in reservas %}
                         <tr>
-                          {% if is_admin_view %}<th>Utilizador</th>{% endif %}
-                          <th>Espa&ccedil;o</th>
-                          <th>Modalidade</th>
-                          <th>Data</th>
-                          <th>In&iacute;cio</th>
-                          <th>Fim</th>
-                          <th>Estado</th>
-                          <th>Pagamento</th>
-                          <th>A&ccedil;&otilde;es</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {% for reserva in reservas %}
-                          <tr>
-                            {% if is_admin_view %}
-                              <td>
-                                <div class="reservations-user">
-                                  <strong>{{ reserva.utilizador }}</strong>
-                                  <span>@{{ reserva.utilizador_username }}</span>
-                                </div>
-                              </td>
-                            {% endif %}
+                          {% if is_admin_view %}
                             <td>
-                              <div class="reservations-space">
-                                <strong>{{ reserva.espaco }}</strong>
-                                {% if is_admin_view %}
-                                  <span>{{ reserva.modalidade }}</span>
-                                {% endif %}
+                              <div class="reservations-user">
+                                <strong>{{ reserva.utilizador }}</strong>
+                                <span>@{{ reserva.utilizador_username }}</span>
                               </div>
                             </td>
-                            <td>{{ reserva.modalidade }}</td>
-                            <td>{{ reserva.data_label }}</td>
-                            <td>{{ reserva.inicio_label }}</td>
-                            <td>{{ reserva.fim_label }}</td>
-                            <td>
-                              <span class="reservations-badge reservations-badge--{{ reserva.estado }}">
-                                {{ reserva.estado_label }}
-                              </span>
-                            </td>
-                            <td>
+                          {% endif %}
+                          <td>
+                            <div class="reservations-space">
+                              <strong>{{ reserva.espaco }}</strong>
+                              {% if is_admin_view %}
+                                <span>{{ reserva.duracao_label }}</span>
+                              {% endif %}
+                            </div>
+                          </td>
+                          <td>{{ reserva.modalidade }}</td>
+                          <td>{{ reserva.data_label }}</td>
+                          <td>{{ reserva.inicio_label }}</td>
+                          <td>{{ reserva.fim_label }}</td>
+                          <td>
+                            <span class="reservations-badge reservations-badge--{{ reserva.estado }}">
+                              {{ reserva.estado_label }}
+                            </span>
+                          </td>
+                          <td>
+                            <div class="reservations-payment">
                               <strong class="reservations-payment-value">{{ reserva.pagamento_valor_label }}</strong>
-                            </td>
-                            <td>
-                              <div class="reservations-actions">
-                                {% if is_admin_view %}
+                              <span class="reservations-payment-state">{{ reserva.pagamento_estado_label }}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div class="reservations-actions">
+                              {% if is_admin_view %}
+                                {% if reserva.estado != "cancelada" %}
                                   <button
-                                    class="reservations-button reservations-button--ghost js-open-payment-modal{% if reserva.estado in ['pendente', 'cancelada'] %} reservations-button--disabled{% endif %}"
+                                    class="reservations-button reservations-button--ghost js-open-payment-modal"
                                     type="button"
-                                    {% if reserva.estado in ['pendente', 'cancelada'] %}disabled aria-disabled="true"{% endif %}
+                                    data-reserva-espaco="{{ reserva.espaco }}"
+                                    data-reserva-data="{{ reserva.data_label }}"
+                                    data-reserva-hora="{{ reserva.inicio_label }} - {{ reserva.fim_label }}"
+                                    data-pagamento-estado="{{ reserva.detalhe_pagamento.estado }}"
+                                    data-pagamento-valor="{{ reserva.detalhe_pagamento.valor }}"
+                                    data-pagamento-data="{{ reserva.detalhe_pagamento.data_pagamento }}"
+                                    data-pagamento-nome="{{ reserva.detalhe_pagamento.nome_faturacao }}"
+                                    data-pagamento-email="{{ reserva.detalhe_pagamento.email_faturacao }}"
+                                    data-pagamento-morada="{{ reserva.detalhe_pagamento.morada_completa }}"
+                                    data-pagamento-cartao="{{ reserva.detalhe_pagamento.cartao }}"
                                   >
                                     Ver
                                   </button>
 
-                                  {% if reserva.pode_cancelar_admin %}
-                                    <form method="post" action="{{ url_for('reservas.cancelar_reserva', reserva_id=reserva.id) }}">
-                                      <button
-                                        class="reservations-button reservations-button--danger"
-                                        type="submit"
-                                        onclick="return confirm('Cancelar reserva?');"
-                                      >
-                                        Cancelar
-                                      </button>
-                                    </form>
-                                  {% endif %}
-                                {% else %}
-                                  {% if reserva.pode_ver_utilizador %}
+                                  <form method="post" action="{{ url_for('reservas.cancelar_reserva', reserva_id=reserva.id) }}">
                                     <button
-                                      class="reservations-button reservations-button--ghost js-open-payment-modal"
-                                      type="button"
+                                      class="reservations-button reservations-button--danger"
+                                      type="submit"
+                                      onclick="return confirm('Cancelar reserva?');"
                                     >
-                                      Ver
+                                      Cancelar
                                     </button>
-                                  {% endif %}
-
-                                  {% if reserva.pode_pagar_utilizador %}
-                                    <form method="post" action="{{ url_for('reservas.pagar_reserva', reserva_id=reserva.id) }}">
-                                      <button
-                                        class="reservations-button reservations-button--payment"
-                                        type="submit"
-                                      >
-                                        Pagar
-                                      </button>
-                                    </form>
-                                  {% endif %}
-
-                                  {% if reserva.pode_cancelar_utilizador %}
-                                    <form method="post" action="{{ url_for('reservas.cancelar_reserva', reserva_id=reserva.id) }}">
-                                      <button
-                                        class="reservations-button reservations-button--danger"
-                                        type="submit"
-                                        onclick="return confirm('Cancelar reserva?');"
-                                      >
-                                        Cancelar
-                                      </button>
-                                    </form>
-                                  {% endif %}
+                                  </form>
                                 {% endif %}
-                              </div>
-                            </td>
-                          </tr>
-                        {% endfor %}
-                      </tbody>
-                    </table>
-                  </div>
-                {% else %}
-                  <div class="reservations-empty">
-                    <h4>Sem reservas para apresentar</h4>
-                    <p>N&atilde;o foram encontrados resultados para os filtros atuais.</p>
-                  </div>
-                {% endif %}
-              </div>
+                              {% else %}
+                                {% if reserva.estado == "confirmada" %}
+                                  <button
+                                    class="reservations-button reservations-button--ghost js-open-payment-modal"
+                                    type="button"
+                                    data-reserva-espaco="{{ reserva.espaco }}"
+                                    data-reserva-data="{{ reserva.data_label }}"
+                                    data-reserva-hora="{{ reserva.inicio_label }} - {{ reserva.fim_label }}"
+                                    data-pagamento-estado="{{ reserva.detalhe_pagamento.estado }}"
+                                    data-pagamento-valor="{{ reserva.detalhe_pagamento.valor }}"
+                                    data-pagamento-data="{{ reserva.detalhe_pagamento.data_pagamento }}"
+                                    data-pagamento-nome="{{ reserva.detalhe_pagamento.nome_faturacao }}"
+                                    data-pagamento-email="{{ reserva.detalhe_pagamento.email_faturacao }}"
+                                    data-pagamento-morada="{{ reserva.detalhe_pagamento.morada_completa }}"
+                                    data-pagamento-cartao="{{ reserva.detalhe_pagamento.cartao }}"
+                                  >
+                                    Ver
+                                  </button>
+                                {% endif %}
+
+                                {% if reserva.estado == "pendente" %}
+                                  <a
+                                    class="reservations-button reservations-button--payment"
+                                    href="{{ url_for('pagamentos.checkout_reserva', reserva_id=reserva.id) }}"
+                                  >
+                                    Pagar
+                                  </a>
+
+                                  <form method="post" action="{{ url_for('reservas.cancelar_reserva', reserva_id=reserva.id) }}">
+                                    <button
+                                      class="reservations-button reservations-button--danger"
+                                      type="submit"
+                                      onclick="return confirm('Cancelar reserva?');"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </form>
+                                {% endif %}
+                              {% endif %}
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <div class="reservations-empty">
+                  <h4>Sem reservas para apresentar</h4>
+                  <p>N&atilde;o foram encontrados resultados para os filtros atuais.</p>
+                </div>
+              {% endif %}
             </div>
           </section>
         </main>
@@ -309,7 +325,32 @@
         </button>
 
         <div class="reservations-modal__header">
+          <p class="reservations-modal__eyebrow">Detalhe</p>
           <h3 id="payment-modal-title">Dados de pagamento</h3>
+        </div>
+
+        <div class="reservations-modal__grid">
+          <section class="reservations-modal__card">
+            <h4>Reserva</h4>
+            <dl class="reservations-modal__list">
+              <div><dt>Espa&ccedil;o</dt><dd data-modal="espaco">-</dd></div>
+              <div><dt>Data</dt><dd data-modal="data">-</dd></div>
+              <div><dt>Hor&aacute;rio</dt><dd data-modal="hora">-</dd></div>
+            </dl>
+          </section>
+
+          <section class="reservations-modal__card">
+            <h4>Pagamento</h4>
+            <dl class="reservations-modal__list">
+              <div><dt>Estado</dt><dd data-modal="estado">-</dd></div>
+              <div><dt>Valor</dt><dd data-modal="valor">-</dd></div>
+              <div><dt>Data</dt><dd data-modal="data_pagamento">-</dd></div>
+              <div><dt>Fatura</dt><dd data-modal="nome">-</dd></div>
+              <div><dt>Email</dt><dd data-modal="email">-</dd></div>
+              <div><dt>Morada</dt><dd data-modal="morada">-</dd></div>
+              <div><dt>Cart&atilde;o</dt><dd data-modal="cartao">-</dd></div>
+            </dl>
+          </section>
         </div>
       </div>
     </div>
@@ -333,7 +374,31 @@
           return;
         }
 
-        const openModal = () => {
+        const fields = {
+          espaco: modal.querySelector('[data-modal="espaco"]'),
+          data: modal.querySelector('[data-modal="data"]'),
+          hora: modal.querySelector('[data-modal="hora"]'),
+          estado: modal.querySelector('[data-modal="estado"]'),
+          valor: modal.querySelector('[data-modal="valor"]'),
+          dataPagamento: modal.querySelector('[data-modal="data_pagamento"]'),
+          nome: modal.querySelector('[data-modal="nome"]'),
+          email: modal.querySelector('[data-modal="email"]'),
+          morada: modal.querySelector('[data-modal="morada"]'),
+          cartao: modal.querySelector('[data-modal="cartao"]'),
+        };
+
+        const openModal = (button) => {
+          fields.espaco.textContent = button.dataset.reservaEspaco || "-";
+          fields.data.textContent = button.dataset.reservaData || "-";
+          fields.hora.textContent = button.dataset.reservaHora || "-";
+          fields.estado.textContent = button.dataset.pagamentoEstado || "-";
+          fields.valor.textContent = button.dataset.pagamentoValor || "-";
+          fields.dataPagamento.textContent = button.dataset.pagamentoData || "-";
+          fields.nome.textContent = button.dataset.pagamentoNome || "-";
+          fields.email.textContent = button.dataset.pagamentoEmail || "-";
+          fields.morada.textContent = button.dataset.pagamentoMorada || "-";
+          fields.cartao.textContent = button.dataset.pagamentoCartao || "-";
+
           modal.hidden = false;
           document.body.classList.add("modal-open");
         };
@@ -344,7 +409,7 @@
         };
 
         openButtons.forEach((button) => {
-          button.addEventListener("click", openModal);
+          button.addEventListener("click", () => openModal(button));
         });
 
         closeButtons.forEach((button) => {

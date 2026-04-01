@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checkout | EasySport</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/checkout.css') }}" />
+  </head>
+  <body class="checkout-page">
+    <main class="checkout-layout">
+      <section class="checkout-summary-pane">
+        <div class="checkout-summary-pane__inner">
+          <div class="checkout-summary-pane__media">
+            <img src="{{ url_for('static', filename=imagem_espaco) }}" alt="{{ resumo.espaco }}" />
+          </div>
+
+          <div class="checkout-summary-pane__intro">
+            <p class="checkout-kicker">Resumo da reserva</p>
+            <h1>{{ resumo.espaco }}</h1>
+            <p>{{ resumo.modalidade }}</p>
+          </div>
+
+          <div class="checkout-summary-section">
+            <div class="checkout-summary-row">
+              <span>Data</span>
+              <strong>{{ resumo.data }}</strong>
+            </div>
+            <div class="checkout-summary-row">
+              <span>Hora de in&iacute;cio</span>
+              <strong>{{ resumo.inicio }}</strong>
+            </div>
+            <div class="checkout-summary-row">
+              <span>Hora de fim</span>
+              <strong>{{ resumo.fim }}</strong>
+            </div>
+            <div class="checkout-summary-row">
+              <span>Dura&ccedil;&atilde;o</span>
+              <strong>{{ resumo.duracao }}</strong>
+            </div>
+          </div>
+
+          <div class="checkout-summary-section">
+            <div class="checkout-summary-row">
+              <span>Pre&ccedil;o por hora</span>
+              <strong>{{ resumo.preco_hora }}</strong>
+            </div>
+            <div class="checkout-summary-row checkout-summary-row--total">
+              <span>Total a pagar</span>
+              <strong>{{ resumo.total }}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="checkout-payment-pane">
+        <div class="checkout-payment-pane__inner">
+          <a class="checkout-back" href="{{ url_for('reservas.minha_reservas') }}" aria-label="Voltar para as reservas">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M14.5 5.5 8 12l6.5 6.5" />
+            </svg>
+          </a>
+
+          <div class="checkout-payment-pane__intro">
+            <p class="checkout-kicker">Pagamento</p>
+            <h2>Concluir checkout</h2>
+            <p>Introduz os dados do cart&atilde;o para finalizar esta reserva.</p>
+          </div>
+
+          {% with messages = get_flashed_messages(with_categories=True) %}
+            {% if messages %}
+              <div class="auth-messages flash-stack checkout-auth-messages">
+                {% for category, message in messages %}
+                  <div class="auth-alert auth-alert--{{ category }} flash-message" data-flash-message>
+                    <span class="flash-message__text">{{ message }}</span>
+                    <button class="flash-message__close" type="button" aria-label="Fechar notifica&ccedil;&atilde;o" data-flash-close>&times;</button>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endwith %}
+
+          <form class="checkout-form" method="post" action="{{ url_for('pagamentos.processar_checkout_reserva', reserva_id=reserva.id) }}" data-custom-validation="true" data-validation-stack-class="auth-messages flash-stack checkout-auth-messages" data-validation-alert-class="auth-alert auth-alert--danger flash-message">
+            <div class="checkout-field">
+              <label for="emailFaturacao">Email</label>
+              <input id="emailFaturacao" type="email" name="emailFaturacao" value="{{ form_data.emailFaturacao }}" autocomplete="email" required />
+            </div>
+
+            <div class="checkout-field">
+              <label for="nomeFaturacao">Nome do titular</label>
+              <input id="nomeFaturacao" type="text" name="nomeFaturacao" value="{{ form_data.nomeFaturacao }}" autocomplete="cc-name" required />
+            </div>
+
+            <div class="checkout-field">
+              <label for="pais">Pa&iacute;s</label>
+              <select id="pais" name="pais" required>
+                {% set pais_atual = form_data.pais or "Portugal" %}
+                {% for pais in ["Portugal", "Espanha", "Franca", "Alemanha", "Italia", "Reino Unido"] %}
+                  <option value="{{ pais }}" {% if pais_atual == pais %}selected{% endif %}>{{ pais }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="checkout-field">
+              <label for="morada">Morada</label>
+              <input id="morada" type="text" name="morada" value="{{ form_data.morada }}" autocomplete="street-address" required />
+            </div>
+
+            <div class="checkout-form__split">
+              <div class="checkout-field">
+                <label for="codigoPostal">C&oacute;digo postal</label>
+                <input id="codigoPostal" type="text" name="codigoPostal" value="{{ form_data.codigoPostal }}" autocomplete="postal-code" required />
+              </div>
+
+              <div class="checkout-field">
+                <label for="localidade">Localidade</label>
+                <input id="localidade" type="text" name="localidade" value="{{ form_data.localidade }}" autocomplete="address-level2" required />
+              </div>
+            </div>
+
+            <div class="checkout-card-box">
+              <div class="checkout-card-box__header">
+                <label for="numeroCartao">Dados do cart&atilde;o</label>
+                <img class="checkout-card-brands-image" src="{{ url_for('static', filename='img/pagamento_logo.png') }}" alt="Logotipos de pagamento" />
+              </div>
+
+              <input id="numeroCartao" class="checkout-card-box__number" type="text" name="numeroCartao" inputmode="numeric" autocomplete="cc-number" placeholder="1234 1234 1234 1234" value="{{ form_data.numeroCartao }}" maxlength="23" required />
+
+              <div class="checkout-card-box__meta">
+                <div class="checkout-field">
+                  <label for="validade">Validade</label>
+                  <input id="validade" type="text" name="validade" placeholder="MM/AA" autocomplete="cc-exp" value="{{ form_data.validade }}" inputmode="numeric" maxlength="5" required />
+                </div>
+
+                <div class="checkout-field">
+                  <label for="cvv">CVV</label>
+                  <input id="cvv" type="password" name="cvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123" value="{{ form_data.cvv }}" maxlength="4" required />
+                </div>
+              </div>
+            </div>
+
+            <button class="checkout-submit" type="submit">Pagar agora</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/checkout-validation.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>
+  </body>
+</html>

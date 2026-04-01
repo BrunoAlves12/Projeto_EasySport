@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reservar | EasySport</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/reservar.css') }}" />
   </head>
   <body class="reserve-page">
@@ -25,7 +26,7 @@
             <p class="reserve-brand__eyebrow">Reserva</p>
             <h1>EasySport</h1>
           </div>
-        </a>  
+        </a>
 
         <details class="reserve-profile-menu">
           <summary class="reserve-profile-button">
@@ -46,7 +47,7 @@
           </summary>
 
           <div class="reserve-profile-dropdown">
-            <a class="reserve-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Ver espaços</a>
+            <a class="reserve-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Ver espa&ccedil;os</a>
             <a class="reserve-profile-link" href="{{ url_for('reservas.minha_reservas') }}">Consultar reservas</a>
             <a class="reserve-profile-link" href="{{ url_for('main.perfil_utilizador') }}">Perfil</a>
             <a class="reserve-profile-link reserve-profile-link--logout" href="{{ url_for('auth.logout') }}">Logout</a>
@@ -56,11 +57,11 @@
 
       {% with messages = get_flashed_messages(with_categories=True) %}
         {% if messages %}
-          <div class="reserve-messages flash-stack">
+          <div class="auth-messages flash-stack reserve-auth-messages">
             {% for category, message in messages %}
-              <div class="reserve-alert reserve-alert--{{ category }} flash-message" data-flash-message>
+              <div class="auth-alert auth-alert--{{ category }} flash-message" data-flash-message>
                 <span class="flash-message__text">{{ message }}</span>
-                <button class="flash-message__close" type="button" aria-label="Fechar notificação" data-flash-close>&times;</button>
+                <button class="flash-message__close" type="button" aria-label="Fechar notifica&ccedil;&atilde;o" data-flash-close>&times;</button>
               </div>
             {% endfor %}
           </div>
@@ -75,34 +76,34 @@
               <h3>Completa a tua reserva</h3>
             </div>
 
-            <form class="reserve-form" method="post" action="{{ url_for('reservas.criar_reserva') }}" data-custom-validation="true" data-validation-stack-class="reserve-messages flash-stack" data-validation-alert-class="reserve-alert reserve-alert--danger flash-message">
+            <form class="reserve-form" method="post" action="{{ url_for('reservas.criar_reserva') }}" data-custom-validation="true" data-validation-stack-class="auth-messages flash-stack reserve-auth-messages" data-validation-alert-class="auth-alert auth-alert--danger flash-message">
               <div class="reserve-field">
-                <label for="espaco_id">Espaço</label>
+                <label for="espaco_id">Espa&ccedil;o</label>
                 {% if selected_espaco %}
                   <input type="hidden" id="espaco_id" name="espaco_id" value="{{ selected_espaco.id }}" />
                   <div
                     class="reserve-selected-space"
                     data-space-name="{{ selected_espaco.nome }}"
                     data-space-price="{{ '%.2f'|format(selected_espaco.precoHora) }}"
-                    data-space-mode="{{ selected_espaco.modalidade or 'Espaço desportivo' }}"
+                    data-space-mode="{{ selected_espaco.modalidade or 'Espa&ccedil;o desportivo' }}"
                   >
                     <div>
                       <strong>{{ selected_espaco.nome }}</strong>
-                      <p>{{ selected_espaco.modalidade or "Espaço desportivo" }}</p>
+                      <p>{{ selected_espaco.modalidade or "Espa&ccedil;o desportivo" }}</p>
                     </div>
-                    <span>{{ "%.2f"|format(selected_espaco.precoHora) }}€/hora</span>
+                    <span>{{ "%.2f"|format(selected_espaco.precoHora) }}&euro;/hora</span>
                   </div>
                 {% else %}
                   <select id="espaco_id" name="espaco_id" class="reserve-select" required>
-                    <option value="">Seleciona um espaço</option>
+                    <option value="">Seleciona um espa&ccedil;o</option>
                     {% for espaco in espacos %}
                       <option
                         value="{{ espaco.id }}"
                         data-space-name="{{ espaco.nome }}"
                         data-space-price="{{ '%.2f'|format(espaco.precoHora) }}"
-                        data-space-mode="{{ espaco.modalidade or 'Espaço desportivo' }}"
+                        data-space-mode="{{ espaco.modalidade or 'Espa&ccedil;o desportivo' }}"
                       >
-                        {{ espaco.nome }} - {{ "%.2f"|format(espaco.precoHora) }}€/hora
+                        {{ espaco.nome }} - {{ "%.2f"|format(espaco.precoHora) }}&euro;/hora
                       </option>
                     {% endfor %}
                   </select>
@@ -116,16 +117,16 @@
                       <span class="reserve-step__number">1</span>
                       <h4>Escolhe o dia</h4>
                     </div>
-                    <p id="calendar-status" class="reserve-step__status">Seleciona um espaço para carregar o calendário.</p>
+                    <p id="calendar-status" class="reserve-step__status">Seleciona um espa&ccedil;o para carregar o calend&aacute;rio.</p>
                   </div>
 
                   <div class="reserve-calendar">
                     <div class="reserve-calendar__header">
-                      <button id="calendar-prev" class="reserve-icon-button" type="button" aria-label="Mês anterior">
+                      <button id="calendar-prev" class="reserve-icon-button" type="button" aria-label="M&ecirc;s anterior">
                         &lsaquo;
                       </button>
                       <strong id="calendar-month-label">--</strong>
-                      <button id="calendar-next" class="reserve-icon-button" type="button" aria-label="Mês seguinte">
+                      <button id="calendar-next" class="reserve-icon-button" type="button" aria-label="M&ecirc;s seguinte">
                         &rsaquo;
                       </button>
                     </div>
@@ -137,7 +138,7 @@
                       <span>Qua</span>
                       <span>Qui</span>
                       <span>Sex</span>
-                      <span>Sáb</span>
+                      <span>S&aacute;b</span>
                     </div>
 
                     <div id="calendar-grid" class="reserve-calendar__grid" aria-live="polite"></div>
@@ -154,13 +155,13 @@
                   <div class="reserve-step__header">
                     <div>
                       <span class="reserve-step__number">2</span>
-                      <h4>Escolhe a hora de início</h4>
+                      <h4>Escolhe a hora de in&iacute;cio</h4>
                     </div>
-                    <p id="starts-status" class="reserve-step__status">Seleciona primeiro um dia disponível.</p>
+                    <p id="starts-status" class="reserve-step__status">Seleciona primeiro um dia dispon&iacute;vel.</p>
                   </div>
 
                   <div id="starts-container" class="reserve-options" aria-live="polite">
-                    <p class="reserve-options__placeholder">Ainda não existem horas para mostrar.</p>
+                    <p class="reserve-options__placeholder">Ainda n&atilde;o existem horas para mostrar.</p>
                   </div>
                 </section>
 
@@ -168,13 +169,13 @@
                   <div class="reserve-step__header">
                     <div>
                       <span class="reserve-step__number">3</span>
-                      <h4>Escolhe a duração</h4>
+                      <h4>Escolhe a dura&ccedil;&atilde;o</h4>
                     </div>
-                    <p id="durations-status" class="reserve-step__status">Escolhe uma hora de início para filtrar as durações possíveis.</p>
+                    <p id="durations-status" class="reserve-step__status">Escolhe uma hora de in&iacute;cio para filtrar as dura&ccedil;&otilde;es poss&iacute;veis.</p>
                   </div>
 
                   <div id="durations-container" class="reserve-options" aria-live="polite">
-                    <p class="reserve-options__placeholder">As durações válidas aparecem aqui.</p>
+                    <p class="reserve-options__placeholder">As dura&ccedil;&otilde;es v&aacute;lidas aparecem aqui.</p>
                   </div>
                 </section>
               </div>
@@ -201,7 +202,7 @@
 
             <dl class="reserve-summary__list">
               <div>
-                <dt>Espaço</dt>
+                <dt>Espa&ccedil;o</dt>
                 <dd id="summary-space">{{ selected_espaco.nome if selected_espaco else "Por selecionar" }}</dd>
               </div>
               <div>
@@ -213,7 +214,7 @@
                 <dd id="summary-date">Por selecionar</dd>
               </div>
               <div>
-                <dt>Hora de início</dt>
+                <dt>Hora de in&iacute;cio</dt>
                 <dd id="summary-start">Por selecionar</dd>
               </div>
               <div>
@@ -221,17 +222,17 @@
                 <dd id="summary-end">Por selecionar</dd>
               </div>
               <div>
-                <dt>Preço por hora</dt>
+                <dt>Pre&ccedil;o por hora</dt>
                 <dd id="summary-price">
                   {% if selected_espaco %}
-                    {{ "%.2f"|format(selected_espaco.precoHora) }}€
+                    {{ "%.2f"|format(selected_espaco.precoHora) }}&euro;
                   {% else %}
                     --
                   {% endif %}
                 </dd>
               </div>
               <div>
-                <dt>Duração</dt>
+                <dt>Dura&ccedil;&atilde;o</dt>
                 <dd id="summary-duration">Por selecionar</dd>
               </div>
               <div class="reserve-summary__total">
@@ -241,13 +242,44 @@
             </dl>
 
             <div class="reserve-summary__card">
-              <strong>Horário do espaço</strong>
+              <strong>Hor&aacute;rio do espa&ccedil;o</strong>
               <p id="summary-hours">{{ configuracao_reserva.abertura }} - {{ configuracao_reserva.fecho }}</p>
             </div>
           </aside>
         </div>
       </main>
     </div>
+
+    {% if checkout_prompt %}
+      <div class="reserve-confirm-modal" id="reserve-confirm-modal">
+        <div class="reserve-confirm-modal__backdrop" data-close-reserve-modal></div>
+        <div class="reserve-confirm-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="reserve-confirm-title">
+          <button class="reserve-confirm-modal__close" type="button" data-close-reserve-modal aria-label="Fechar modal">
+            <span aria-hidden="true">&times;</span>
+          </button>
+
+          <div class="reserve-confirm-modal__content">
+            <span class="reserve-confirm-modal__pill">{{ checkout_prompt.titulo }}</span>
+            <h2 id="reserve-confirm-title">{{ checkout_prompt.mensagem }}</h2>
+            <p>
+              A reserva para <strong>{{ checkout_prompt.resumo.espaco }}</strong> no dia
+              <strong>{{ checkout_prompt.resumo.data }}</strong> das
+              <strong>{{ checkout_prompt.resumo.inicio }}</strong> &agrave;s
+              <strong>{{ checkout_prompt.resumo.fim }}</strong> ficou pendente.
+            </p>
+          </div>
+
+          <div class="reserve-confirm-modal__actions">
+            <a class="reserve-button reserve-button--primary" href="{{ url_for('pagamentos.checkout_reserva', reserva_id=checkout_prompt.reserva_id) }}">
+              Pagar agora
+            </a>
+            <a class="reserve-button reserve-button--ghost" href="{{ url_for('reservas.minha_reservas') }}">
+              Mais tarde
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
 
     <script>
       const reserveShell = document.querySelector(".reserve-shell");
@@ -275,6 +307,7 @@
       const summaryDuration = document.getElementById("summary-duration");
       const summaryTotal = document.getElementById("summary-total");
       const summaryHours = document.getElementById("summary-hours");
+      const confirmModal = document.getElementById("reserve-confirm-modal");
 
       const initialCalendar = {
         ano: Number(reserveShell.dataset.calendarYear),
@@ -574,6 +607,26 @@
       updateSummarySpace();
       updateSubmitState();
       loadMonthCalendar();
+
+      if (confirmModal) {
+        const closeButtons = confirmModal.querySelectorAll("[data-close-reserve-modal]");
+        const closeModal = () => {
+          confirmModal.setAttribute("hidden", "hidden");
+          document.body.classList.remove("reserve-modal-open");
+        };
+
+        document.body.classList.add("reserve-modal-open");
+
+        closeButtons.forEach((button) => {
+          button.addEventListener("click", closeModal);
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && !confirmModal.hasAttribute("hidden")) {
+            closeModal();
+          }
+        });
+      }
     </script>
     <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
     <script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>

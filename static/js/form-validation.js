@@ -1,4 +1,61 @@
 (() => {
+  const getFieldLabel = (field) => {
+    const explicitLabel = field.dataset.label?.trim();
+    if (explicitLabel) {
+      return explicitLabel;
+    }
+
+    const wrapperLabel = field.closest("label");
+    const wrapperText = wrapperLabel?.querySelector("span")?.textContent?.trim();
+    if (wrapperText) {
+      return wrapperText;
+    }
+
+    if (field.id) {
+      const externalLabel = document.querySelector(`label[for="${field.id}"]`);
+      const externalText = externalLabel?.textContent?.trim();
+      if (externalText) {
+        return externalText;
+      }
+    }
+
+    return field.name || "campo";
+  };
+
+  const getValidationMessage = (field) => {
+    const label = getFieldLabel(field);
+
+    if (field.validity.customError && field.validationMessage) {
+      return field.validationMessage;
+    }
+
+    if (field.validity.valueMissing) {
+      return `Preenche o campo "${label}".`;
+    }
+
+    if (field.validity.typeMismatch) {
+      if (field.type === "email") {
+        return "Introduz um email valido.";
+      }
+
+      return `Verifica o campo "${label}".`;
+    }
+
+    if (field.validity.patternMismatch) {
+      return `O valor introduzido em "${label}" nao e valido.`;
+    }
+
+    if (field.validity.tooShort || field.validity.tooLong) {
+      return `O campo "${label}" nao tem o tamanho esperado.`;
+    }
+
+    if (field.validity.rangeUnderflow || field.validity.rangeOverflow) {
+      return `O valor introduzido em "${label}" esta fora do intervalo permitido.`;
+    }
+
+    return `Verifica o campo "${label}".`;
+  };
+
   const createValidationAlert = (form, message) => {
     const existing = form.parentElement?.querySelector("[data-validation-generated='true']");
     if (existing) {
@@ -45,7 +102,7 @@
       }
 
       event.preventDefault();
-      createValidationAlert(form, invalidField.validationMessage);
+      createValidationAlert(form, getValidationMessage(invalidField));
       invalidField.focus();
     });
 
@@ -55,6 +112,9 @@
         if (generated && field.validity.valid) {
           generated.remove();
         }
+
+        field.classList.toggle("is-invalid", !field.validity.valid);
+        field.setAttribute("aria-invalid", String(!field.validity.valid));
       });
     });
   });

@@ -1,7 +1,8 @@
 import calendar
+import os
 from datetime import date, datetime, time, timedelta
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
 from app.extensions import db
 from app.models import EstadoReserva, Espaco, Pagamento, Reserva, User
@@ -38,6 +39,26 @@ def _obter_espaco_por_id(espaco_id):
         return None
 
     return Espaco.query.filter_by(id=espaco_id, ativo=True).first()
+
+
+def _construir_contexto_reservar(selected_espaco=None, checkout_prompt=None):
+    espacos = _obter_espacos_ativos()
+    hoje = date.today()
+
+    return {
+        "espacos": espacos,
+        "selected_espaco": selected_espaco,
+        "data_minima": hoje.isoformat(),
+        "calendario_inicial": {
+            "ano": hoje.year,
+            "mes": hoje.month,
+        },
+        "configuracao_reserva": {
+            "abertura": _formatar_hora(HORA_ABERTURA),
+            "fecho": _formatar_hora(HORA_FECHO),
+        },
+        "checkout_prompt": checkout_prompt,
+    }
 
 
 def _query_reservas_ativas(espaco_id):
@@ -203,6 +224,98 @@ def _estado_reserva_label(estado):
     return labels.get(estado, "Sem estado")
 
 
+def _estado_pagamento_label(estado):
+    labels = {
+        "pendente": "Pendente",
+        "pago": "Pago",
+        "cancelado": "Cancelado",
+    }
+    return labels.get(estado or "pendente", "Pendente")
+
+
+def _formatar_preco(valor):
+    if valor is None:
+        return "-"
+
+    return f"{valor:.2f} EUR"
+
+
+def _duracao_reserva_horas(reserva):
+    return (reserva.dataFim - reserva.dataInicio).total_seconds() / 3600
+
+
+def _obter_ou_criar_pagamento_reserva(reserva, valor=None):
+    pagamento = Pagamento.query.filter_by(idReserva=reserva.id).first()
+
+    if pagamento:
+        if valor is not None:
+            pagamento.valor = valor
+        return pagamento
+
+    pagamento = Pagamento(
+        idUser=reserva.idUser,
+        idReserva=reserva.id,
+        valor=valor if valor is not None else 0,
+        estado="pendente",
+    )
+    db.session.add(pagamento)
+    return pagamento
+
+
+def _build_checkout_context(reserva, pagamento=None):
+    espaco = Espaco.query.get(reserva.idEspaco)
+    utilizador = User.query.get(reserva.idUser)
+    duracao_horas = _duracao_reserva_horas(reserva)
+    preco_hora = espaco.precoHora if espaco else 0
+    pagamento = pagamento or Pagamento.query.filter_by(idReserva=reserva.id).first()
+    valor_total = pagamento.valor if pagamento else duracao_horas * preco_hora
+    imagem_espaco = current_app.config["ESPACO_IMAGEM_DEFAULT"]
+
+    if espaco and espaco.imagem:
+        caminho_imagem = os.path.join(current_app.static_folder, espaco.imagem.replace("/", os.sep))
+        if os.path.exists(caminho_imagem):
+            imagem_espaco = espaco.imagem
+
+    return {
+        "reserva": reserva,
+        "espaco": espaco,
+        "utilizador": utilizador,
+        "pagamento": pagamento,
+        "imagem_espaco": imagem_espaco,
+        "resumo": {
+            "espaco": espaco.nome if espaco else "Espaço indisponível",
+            "modalidade": (espaco.modalidade or "Espaço desportivo").strip() if espaco else "Espaço desportivo",
+            "data": reserva.dataInicio.strftime("%d/%m/%Y"),
+            "inicio": reserva.dataInicio.strftime("%H:%M"),
+            "fim": reserva.dataFim.strftime("%H:%M"),
+            "duracao_horas": int(duracao_horas) if duracao_horas.is_integer() else duracao_horas,
+            "duracao_label": f"{int(duracao_horas)} hora" if duracao_horas == 1 else f"{int(duracao_horas)} horas",
+            "preco_hora": preco_hora,
+            "preco_hora_label": _formatar_preco(preco_hora),
+            "valor_total": valor_total,
+            "valor_total_label": _formatar_preco(valor_total),
+        },
+        "dados_faturacao": {
+            "nomeFaturacao": (pagamento.nomeFaturacao if pagamento and pagamento.nomeFaturacao else utilizador.nome) if utilizador else "",
+            "emailFaturacao": (pagamento.emailFaturacao if pagamento and pagamento.emailFaturacao else utilizador.email) if utilizador else "",
+            "morada": pagamento.morada if pagamento and pagamento.morada else "",
+            "codigoPostal": pagamento.codigoPostal if pagamento and pagamento.codigoPostal else "",
+            "localidade": pagamento.localidade if pagamento and pagamento.localidade else "",
+            "pais": pagamento.pais if pagamento and pagamento.pais else "Portugal",
+        },
+    }
+
+
+def _build_checkout_prompt(reserva, pagamento):
+    contexto = _build_checkout_context(reserva, pagamento)
+    return {
+        "reserva_id": reserva.id,
+        "titulo": "Reserva criada com sucesso",
+        "mensagem": "Pretende pagar agora ou mais tarde?",
+        "resumo": contexto["resumo"],
+    }
+
+
 def _build_reserva_view_models(reservas, users, espacos, pagamentos):
     reservas_view = []
 
@@ -210,8 +323,8 @@ def _build_reserva_view_models(reservas, users, espacos, pagamentos):
         user = users.get(reserva.idUser)
         espaco = espacos.get(reserva.idEspaco)
         pagamento = pagamentos.get(reserva.id)
-        valor = pagamento.valor if pagamento else None
         estado = reserva.estado.value
+        estado_pagamento = pagamento.estado if pagamento else "pendente"
 
         reservas_view.append(
             {
@@ -224,13 +337,32 @@ def _build_reserva_view_models(reservas, users, espacos, pagamentos):
                 "data_label": reserva.dataInicio.strftime("%d/%m/%Y"),
                 "inicio_label": reserva.dataInicio.strftime("%H:%M"),
                 "fim_label": reserva.dataFim.strftime("%H:%M"),
+                "duracao_label": f"{int(_duracao_reserva_horas(reserva))} hora" if _duracao_reserva_horas(reserva) == 1 else f"{int(_duracao_reserva_horas(reserva))} horas",
                 "estado": estado,
                 "estado_label": _estado_reserva_label(reserva.estado),
-                "pagamento_valor_label": f"{valor:.2f} EUR" if valor is not None else "-",
-                "pode_ver_utilizador": estado == EstadoReserva.confirmada.value,
-                "pode_pagar_utilizador": estado == EstadoReserva.pendente.value,
-                "pode_cancelar_utilizador": estado == EstadoReserva.pendente.value,
-                "pode_cancelar_admin": estado != EstadoReserva.cancelada.value,
+                "pagamento_estado": estado_pagamento,
+                "pagamento_estado_label": _estado_pagamento_label(estado_pagamento),
+                "pagamento_valor_label": _formatar_preco(pagamento.valor if pagamento else None),
+                "detalhe_pagamento": {
+                    "estado": _estado_pagamento_label(estado_pagamento),
+                    "valor": _formatar_preco(pagamento.valor if pagamento else None),
+                    "data_pagamento": pagamento.dataPagamento.strftime("%d/%m/%Y %H:%M") if pagamento and pagamento.dataPagamento else "Por liquidar",
+                    "nome_faturacao": pagamento.nomeFaturacao if pagamento and pagamento.nomeFaturacao else (user.nome if user else "-"),
+                    "email_faturacao": pagamento.emailFaturacao if pagamento and pagamento.emailFaturacao else (user.email if user else "-"),
+                    "morada_completa": ", ".join(
+                        [
+                            item
+                            for item in [
+                                pagamento.morada if pagamento and pagamento.morada else "",
+                                pagamento.codigoPostal if pagamento and pagamento.codigoPostal else "",
+                                pagamento.localidade if pagamento and pagamento.localidade else "",
+                                pagamento.pais if pagamento and pagamento.pais else "",
+                            ]
+                            if item
+                        ]
+                    ) or "Por preencher",
+                    "cartao": f"**** {pagamento.ultimos4Cartao}" if pagamento and pagamento.ultimos4Cartao else "Nao guardado",
+                },
             }
         )
 
@@ -302,25 +434,19 @@ def reservar_page():
     if "user_id" not in session:
         return redirect(url_for("auth.login_page"))
 
-    espacos = _obter_espacos_ativos()
     espaco_id_selecionado = request.args.get("espaco_id", type=int)
     selected_espaco = _obter_espaco_por_id(espaco_id_selecionado)
-    hoje = date.today()
+    checkout_prompt = None
+    prompt_reserva_id = session.pop("checkout_prompt_reserva_id", None)
 
-    return render_template(
-        "reservar.html",
-        espacos=espacos,
-        selected_espaco=selected_espaco,
-        data_minima=hoje.isoformat(),
-        calendario_inicial={
-            "ano": hoje.year,
-            "mes": hoje.month,
-        },
-        configuracao_reserva={
-            "abertura": _formatar_hora(HORA_ABERTURA),
-            "fecho": _formatar_hora(HORA_FECHO),
-        },
-    )
+    if prompt_reserva_id:
+        reserva = Reserva.query.filter_by(id=prompt_reserva_id, idUser=session["user_id"]).first()
+        if reserva:
+            pagamento = Pagamento.query.filter_by(idReserva=reserva.id).first()
+            checkout_prompt = _build_checkout_prompt(reserva, pagamento)
+            selected_espaco = selected_espaco or _obter_espaco_por_id(reserva.idEspaco)
+
+    return render_template("reservar.html", **_construir_contexto_reservar(selected_espaco, checkout_prompt))
 
 
 @reservas_bp.route("/api/espacos/<int:espaco_id>/calendario-mensal")
@@ -450,21 +576,17 @@ def criar_reserva():
     )
 
     db.session.add(reserva)
-    db.session.commit()
+    db.session.flush()
 
     valor = duracao_horas * espaco.precoHora
-    pagamento = Pagamento(
-        idUser=user_id,
-        idReserva=reserva.id,
-        valor=valor,
-        estado="pendente",
-    )
+    pagamento = _obter_ou_criar_pagamento_reserva(reserva, valor=valor)
+    pagamento.estado = "pendente"
 
-    db.session.add(pagamento)
     db.session.commit()
 
     flash("Reserva criada com sucesso", "success")
-    return redirect(url_for("reservas.minha_reservas"))
+    session["checkout_prompt_reserva_id"] = reserva.id
+    return redirect(url_for("reservas.reservar_page", espaco_id=espaco_id))
 
 
 @reservas_bp.route("/reservas")
@@ -521,34 +643,6 @@ def cancelar_reserva(reserva_id):
     db.session.commit()
 
     flash("Reserva cancelada", "success")
-    if session.get("is_admin"):
-        return redirect(url_for("reservas.listar_reservas"))
-
-    return redirect(url_for("reservas.minha_reservas"))
-
-
-@reservas_bp.route("/pagar-reserva/<int:reserva_id>", methods=["POST"])
-def pagar_reserva(reserva_id):
-    if "user_id" not in session:
-        return redirect(url_for("auth.login_page"))
-
-    reserva = Reserva.query.get_or_404(reserva_id)
-
-    if not session.get("is_admin") and reserva.idUser != session["user_id"]:
-        flash("Acesso restrito", "danger")
-        return redirect(url_for("main.index"))
-
-    pagamento = Pagamento.query.filter_by(idReserva=reserva.id).first()
-
-    reserva.estado = EstadoReserva.confirmada
-
-    if pagamento:
-        pagamento.estado = "pago"
-        pagamento.dataPagamento = datetime.now()
-
-    db.session.commit()
-
-    flash("Reserva confirmada com sucesso", "success")
     if session.get("is_admin"):
         return redirect(url_for("reservas.listar_reservas"))
 

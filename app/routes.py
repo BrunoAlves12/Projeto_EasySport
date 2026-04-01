@@ -225,13 +225,6 @@ def admin_dashboard():
             "botao": "Ver reservas",
             "icone": "calendar",
         },
-        {
-            "titulo": "Consultar pagamentos",
-            "texto": "Reve pagamentos associados as reservas e acompanha o estado financeiro.",
-            "rota": url_for("pagamentos.listar_pagamentos"),
-            "botao": "Ver pagamentos",
-            "icone": "payments",
-        },
     ]
 
     return render_template(
@@ -453,12 +446,3 @@ def alterar_estado_utilizador(user_id):
         "success",
     )
     return redirect(url_for("main.listar_utilizadores"))
-
-
-@main_bp.route("/reservar-page")
-def reservar_page():
-    if "user_id" not in session:
-        flash("Tem de fazer login primeiro", "danger")
-        return redirect(url_for("auth.login_page"))
-
-    return render_template("reservar.html")
