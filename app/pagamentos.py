@@ -84,6 +84,36 @@ def _build_checkout_context(reserva, pagamento):
     }
 
 
+def _reserva_tem_conflito_confirmado(reserva):
+    conflito = Reserva.query.filter(
+        Reserva.id != reserva.id,
+        Reserva.idEspaco == reserva.idEspaco,
+        Reserva.estado == EstadoReserva.confirmada,
+        Reserva.dataInicio < reserva.dataFim,
+        Reserva.dataFim > reserva.dataInicio,
+    ).first()
+
+    return conflito is not None
+
+
+def _cancelar_reserva_pendente_por_conflito(reserva, pagamento):
+    if reserva.estado == EstadoReserva.pendente:
+        reserva.estado = EstadoReserva.cancelada
+
+    if pagamento and pagamento.estado != "pago":
+        pagamento.estado = "cancelado"
+        pagamento.dataPagamento = None
+
+    db.session.commit()
+
+    flash("Este horario ja nao esta disponivel. A tua reserva pendente foi cancelada.", "danger")
+
+    if session.get("is_admin"):
+        return redirect(url_for("reservas.listar_reservas"))
+
+    return redirect(url_for("reservas.minha_reservas"))
+
+
 @pagamentos_bp.route("/checkout/<int:reserva_id>")
 def checkout_reserva(reserva_id):
     if "user_id" not in session:
@@ -103,6 +133,9 @@ def checkout_reserva(reserva_id):
     if pagamento.estado == "pago":
         flash("Esta reserva ja se encontra paga", "success")
         return redirect(url_for("reservas.minha_reservas"))
+
+    if _reserva_tem_conflito_confirmado(reserva):
+        return _cancelar_reserva_pendente_por_conflito(reserva, pagamento)
 
     return render_template("checkout_pagamento.html", **_build_checkout_context(reserva, pagamento))
 
@@ -126,6 +159,9 @@ def processar_checkout_reserva(reserva_id):
     if pagamento.estado == "pago":
         flash("Esta reserva ja se encontra paga", "success")
         return redirect(url_for("reservas.minha_reservas"))
+
+    if _reserva_tem_conflito_confirmado(reserva):
+        return _cancelar_reserva_pendente_por_conflito(reserva, pagamento)
 
     form_data = {
         "nomeFaturacao": request.form.get("nomeFaturacao", "").strip(),

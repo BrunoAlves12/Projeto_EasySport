@@ -61,10 +61,10 @@ def _construir_contexto_reservar(selected_espaco=None, checkout_prompt=None):
     }
 
 
-def _query_reservas_ativas(espaco_id):
+def _query_reservas_confirmadas(espaco_id):
     return Reserva.query.filter(
         Reserva.idEspaco == espaco_id,
-        Reserva.estado != EstadoReserva.cancelada,
+        Reserva.estado == EstadoReserva.confirmada,
     )
 
 
@@ -107,7 +107,7 @@ def _formatar_hora(hour_value):
 
 
 def _reservas_do_periodo(espaco_id, inicio_periodo, fim_periodo):
-    return _query_reservas_ativas(espaco_id).filter(
+    return _query_reservas_confirmadas(espaco_id).filter(
         Reserva.dataInicio < fim_periodo,
         Reserva.dataFim > inicio_periodo,
     ).all()
