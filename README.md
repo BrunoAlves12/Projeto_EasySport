@@ -71,13 +71,19 @@ O objetivo do projeto é simular uma plataforma de reservas desportivas simples,
 
 ---
 
+## Melhorias Futuras
+1. Na Página Inicial do admin adicionar a opção de ver estatisticas do sistema
+2. O utilizador quando edita o perfil pode adicionar uma foto de perfil 
+3. Sistema de Notificações por email
+
+
 ## Guia de Instalação 
 
 1. Extrai a pasta do projeto 
 2. No VS Code abre a pasta com o nome "Projeto_EasySport
 3. Abre o terminal 
-4. Para criar um ambiente virtual: python -m venv venv
-5. Para ativar o ambiente virtual Windows: python -m venv venv |  No Mac/Linux: venv\Scripts\activate
+4. Para criar um ambiente virtual: No Windows: python -m venv venv   |  No Mac/Linux: python3 -m venv venv
+5. Para ativar o ambiente virtual: No Windows: venv\Scripts\activate |  No Mac/Linux: source venv/bin/activate
 6. Para instalar as bibliotecas do projeto: pip install -r requirements.txt
 7. Para executar o projeto: python run.py
 8. Depois abre no navegador: http://127.0.0.1:5000
