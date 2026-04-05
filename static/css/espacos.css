@@ -68,6 +68,8 @@
 .spaces-card {
   overflow: hidden;
   display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
 }
 
 .spaces-card__image-wrap {
@@ -112,6 +114,8 @@
   padding: 22px;
   display: grid;
   gap: 14px;
+  grid-template-rows: auto auto 1fr;
+  min-height: 0;
 }
 
 .spaces-card__top {
@@ -158,6 +162,10 @@
   margin: 0;
   color: var(--auth-muted);
   line-height: 1.65;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .spaces-card__actions,
@@ -165,6 +173,11 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.spaces-card__actions {
+  margin-top: auto;
+  align-self: end;
 }
 
 .spaces-button {

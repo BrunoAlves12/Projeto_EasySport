@@ -232,22 +232,24 @@
                             <div class="reservations-actions">
                               {% if is_admin_view %}
                                 {% if reserva.estado != "cancelada" %}
-                                  <button
-                                    class="reservations-button reservations-button--ghost js-open-payment-modal"
-                                    type="button"
-                                    data-reserva-espaco="{{ reserva.espaco }}"
-                                    data-reserva-data="{{ reserva.data_label }}"
-                                    data-reserva-hora="{{ reserva.inicio_label }} - {{ reserva.fim_label }}"
-                                    data-pagamento-estado="{{ reserva.detalhe_pagamento.estado }}"
-                                    data-pagamento-valor="{{ reserva.detalhe_pagamento.valor }}"
-                                    data-pagamento-data="{{ reserva.detalhe_pagamento.data_pagamento }}"
-                                    data-pagamento-nome="{{ reserva.detalhe_pagamento.nome_faturacao }}"
-                                    data-pagamento-email="{{ reserva.detalhe_pagamento.email_faturacao }}"
-                                    data-pagamento-morada="{{ reserva.detalhe_pagamento.morada_completa }}"
-                                    data-pagamento-cartao="{{ reserva.detalhe_pagamento.cartao }}"
-                                  >
-                                    Ver
-                                  </button>
+                                  {% if reserva.estado == "confirmada" %}
+                                    <button
+                                      class="reservations-button reservations-button--ghost js-open-payment-modal"
+                                      type="button"
+                                      data-reserva-espaco="{{ reserva.espaco }}"
+                                      data-reserva-data="{{ reserva.data_label }}"
+                                      data-reserva-hora="{{ reserva.inicio_label }} - {{ reserva.fim_label }}"
+                                      data-pagamento-estado="{{ reserva.detalhe_pagamento.estado }}"
+                                      data-pagamento-valor="{{ reserva.detalhe_pagamento.valor }}"
+                                      data-pagamento-data="{{ reserva.detalhe_pagamento.data_pagamento }}"
+                                      data-pagamento-nome="{{ reserva.detalhe_pagamento.nome_faturacao }}"
+                                      data-pagamento-email="{{ reserva.detalhe_pagamento.email_faturacao }}"
+                                      data-pagamento-morada="{{ reserva.detalhe_pagamento.morada_completa }}"
+                                      data-pagamento-cartao="{{ reserva.detalhe_pagamento.cartao }}"
+                                    >
+                                      Ver
+                                    </button>
+                                  {% endif %}
 
                                   <form method="post" action="{{ url_for('reservas.cancelar_reserva', reserva_id=reserva.id) }}">
                                     <button

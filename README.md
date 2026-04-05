@@ -55,26 +55,26 @@ O objetivo do projeto é simular uma plataforma de reservas desportivas simples,
   framework web usada para construir a aplicação
 
 - **Jinja**  
-  motor de templates usado nas páginas HTML
+  sistema que permite meter dados do Python dentro do HTML
 
 - **HTML / CSS**  
   estrutura e estilo da interface
 
 - **JavaScript**  
-  interatividade no frontend, como dropdowns, modais e componentes dinâmicos
+  interatividade no frontend, como dropdowns, para validações, mensagens e seleção de horários na reserva.
 
 - **SQLite**  
   base de dados usada para guardar a informação do projeto
 
 - **SQLAlchemy**  
-  ORM usado para definir modelos e interagir com a base de dados de forma organizada
+  para fazer a ligação entre o Flask e a base de dados
 
 ---
 
 ## Melhorias Futuras
-1. Na Página Inicial do admin adicionar a opção de ver estatisticas do sistema
-2. O utilizador quando edita o perfil pode adicionar uma foto de perfil 
-3. Sistema de Notificações por email
+1. Na Página Inicial do admin adicionar a opção de ver estatisticas do sistema 
+2. Adicionar a hipótese do cliente adicionar foto ao perfil
+3. Adicionar notificações em falta
 
 
 ## Guia de Instalação 
