@@ -3,6 +3,7 @@ import random
 from datetime import date, datetime, timedelta
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from sqlalchemy import func
 
 from app.auth import _validar_password
 from app.extensions import db
@@ -11,7 +12,8 @@ from app.models import EstadoReserva, EstadoUser, Espaco, Pagamento, Reserva, Us
 main_bp = Blueprint("main", __name__)
 
 
-def _espacos_homepage():
+# Escolhe os espacos em destaque para a homepage.
+def _destaques_homepage():
     espacos = Espaco.query.filter_by(ativo=True).all()
     quantidade = min(3, len(espacos))
 
@@ -31,14 +33,191 @@ def _espacos_homepage():
     return espacos_destaque, len(espacos) > quantidade
 
 
-def _get_current_user():
+# Devolve o utilizador autenticado na sessao atual.
+def _utilizador_atual():
     if not session.get("user_id"):
         return None
 
     return User.query.get(session["user_id"])
 
 
-def _render_editar_utilizador_form(user, form_data=None):
+# Bloqueia o acesso quando a sessao nao pertence a um admin.
+def _exigir_admin():
+    if "user_id" not in session:
+        flash("Tem de fazer login primeiro", "danger")
+        return redirect(url_for("auth.login_page"))
+
+    if not session.get("is_admin"):
+        flash("Acesso restrito ao administrador", "danger")
+        return redirect(url_for("main.index"))
+
+    return None
+
+
+# Garante uma imagem valida para apresentar um espaco.
+def _imagem_segura(imagem):
+    imagem = imagem or current_app.config["ESPACO_IMAGEM_DEFAULT"]
+    caminho_imagem = os.path.join(current_app.static_folder, imagem.replace("/", os.sep))
+
+    if os.path.exists(caminho_imagem):
+        return imagem
+
+    return current_app.config["ESPACO_IMAGEM_DEFAULT"]
+
+
+# Formata valores monetarios para apresentacao.
+def _formatar_moeda(valor):
+    return f"{(valor or 0):.2f} EUR"
+
+
+# Mostra a duracao media de forma curta.
+def _formatar_duracao_media(horas):
+    if not horas:
+        return "-"
+
+    if float(horas).is_integer():
+        horas = int(horas)
+        return f"{horas} hora" if horas == 1 else f"{horas} horas"
+
+    return f"{horas:.1f} horas"
+
+
+# Converte datas dos filtros de estatisticas.
+def _parse_data_filtro(data_str):
+    if not data_str:
+        return None
+
+    try:
+        return datetime.strptime(data_str, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+# Calcula o intervalo usado nos filtros de periodo.
+def _intervalo_periodo(periodo, data_inicio=None, data_fim=None):
+    agora = datetime.now()
+
+    if periodo == "hoje":
+        inicio = datetime(agora.year, agora.month, agora.day)
+        return inicio, inicio + timedelta(days=1)
+
+    if periodo == "mes":
+        inicio = datetime(agora.year, agora.month, 1)
+        if agora.month == 12:
+            return inicio, datetime(agora.year + 1, 1, 1)
+
+        return inicio, datetime(agora.year, agora.month + 1, 1)
+
+    if periodo == "mes_passado":
+        primeiro_mes_atual = datetime(agora.year, agora.month, 1)
+        if agora.month == 1:
+            inicio = datetime(agora.year - 1, 12, 1)
+        else:
+            inicio = datetime(agora.year, agora.month - 1, 1)
+
+        return inicio, primeiro_mes_atual
+
+    if periodo == "ano":
+        inicio = datetime(agora.year, 1, 1)
+        return inicio, datetime(agora.year + 1, 1, 1)
+
+    if periodo == "ano_passado":
+        return datetime(agora.year - 1, 1, 1), datetime(agora.year, 1, 1)
+
+    if periodo == "personalizado" and data_inicio and data_fim:
+        inicio = datetime.combine(data_inicio, datetime.min.time())
+        fim = datetime.combine(data_fim + timedelta(days=1), datetime.min.time())
+        return inicio, fim
+
+    return None, None
+
+
+# Cria o texto visivel do periodo selecionado.
+def _label_periodo(periodo, periodos, data_inicio=None, data_fim=None):
+    if periodo == "personalizado" and data_inicio and data_fim:
+        return f"{data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}"
+
+    return periodos[periodo]
+
+
+# Aplica o intervalo de datas a queries baseadas em reservas.
+def _filtrar_periodo(query, inicio, fim):
+    if inicio and fim:
+        return query.filter(Reserva.dataInicio >= inicio, Reserva.dataInicio < fim)
+
+    return query
+
+
+# Monta a query de pagamentos pagos no periodo escolhido.
+def _pagamentos_pagos(inicio, fim):
+    query = Pagamento.query.join(Reserva, Pagamento.idReserva == Reserva.id).filter(Pagamento.estado == "pago")
+
+    return _filtrar_periodo(query, inicio, fim)
+
+
+# Calcula as metricas do espaco selecionado.
+def _stats_espaco(espaco_id, inicio, fim):
+    query = Reserva.query
+
+    if espaco_id:
+        query = query.filter(Reserva.idEspaco == espaco_id)
+
+    query = _filtrar_periodo(query, inicio, fim)
+
+    total_reservas = query.count()
+    reservas_confirmadas = query.filter(Reserva.estado == EstadoReserva.confirmada).count()
+    reservas_canceladas = query.filter(Reserva.estado == EstadoReserva.cancelada).count()
+
+    receita_query = _pagamentos_pagos(inicio, fim)
+    if espaco_id:
+        receita_query = receita_query.filter(Reserva.idEspaco == espaco_id)
+
+    receita = receita_query.with_entities(func.coalesce(func.sum(Pagamento.valor), 0)).scalar()
+    duracao_media = query.with_entities(
+        func.avg((func.julianday(Reserva.dataFim) - func.julianday(Reserva.dataInicio)) * 24)
+    ).scalar()
+
+    return {
+        "total_reservas": total_reservas,
+        "reservas_confirmadas": reservas_confirmadas,
+        "reservas_canceladas": reservas_canceladas,
+        "receita_label": _formatar_moeda(receita),
+        "duracao_media_label": _formatar_duracao_media(duracao_media),
+    }
+
+
+# Calcula as metricas globais do sistema.
+def _stats_globais(inicio, fim):
+    faturacao = _pagamentos_pagos(inicio, fim).with_entities(
+        func.coalesce(func.sum(Pagamento.valor), 0)
+    ).scalar()
+
+    cliente_top = _filtrar_periodo(
+        db.session.query(User.nome, func.count(Reserva.id).label("total"))
+        .join(Reserva, Reserva.idUser == User.id)
+        .filter(User.isAdmin.is_(False)),
+        inicio,
+        fim,
+    ).group_by(User.id).order_by(func.count(Reserva.id).desc(), User.nome.asc()).first()
+
+    espaco_top = _filtrar_periodo(
+        db.session.query(Espaco.nome, func.count(Reserva.id).label("total"))
+        .join(Reserva, Reserva.idEspaco == Espaco.id),
+        inicio,
+        fim,
+    ).group_by(Espaco.id).order_by(func.count(Reserva.id).desc(), Espaco.nome.asc()).first()
+
+    return {
+        "faturacao_total_label": _formatar_moeda(faturacao),
+        "cliente_top": cliente_top.nome if cliente_top else "Sem reservas",
+        "cliente_top_total": cliente_top.total if cliente_top else 0,
+        "espaco_top": espaco_top.nome if espaco_top else "Sem reservas",
+        "espaco_top_total": espaco_top.total if espaco_top else 0,
+    }
+
+
+# Renderiza o formulario de utilizador com contexto de permissao.
+def _render_form_utilizador(user, form_data=None):
     is_self_edit = session.get("user_id") == user.id
     is_admin_editing_other = session.get("is_admin") and not is_self_edit
 
@@ -51,6 +230,7 @@ def _render_editar_utilizador_form(user, form_data=None):
     )
 
 
+# Converte a data de nascimento enviada no formulario.
 def _parse_data_nascimento(data_str):
     try:
         return datetime.strptime(data_str, "%Y-%m-%d").date()
@@ -58,7 +238,8 @@ def _parse_data_nascimento(data_str):
         return None
 
 
-def _email_e_valido(email):
+# Valida o formato simples de email usado nos formularios.
+def _email_valido(email):
     if "@" not in email:
         return False
 
@@ -66,11 +247,13 @@ def _email_e_valido(email):
     return len(partes) == 2 and "." in partes[1]
 
 
-def _normalizar_estado_utilizador(estado):
+# Converte o valor do formulario para o enum do utilizador.
+def _normalizar_estado_user(estado):
     return EstadoUser.ativo if estado == "ativo" else EstadoUser.inativo
 
 
-def _obter_reservas_ativas_do_utilizador(user_id):
+# Lista reservas futuras que ainda bloqueiam alteracoes da conta.
+def _reservas_ativas_user(user_id):
     agora = datetime.now()
     return Reserva.query.filter(
         Reserva.idUser == user_id,
@@ -79,8 +262,9 @@ def _obter_reservas_ativas_do_utilizador(user_id):
     ).all()
 
 
+# Verifica se uma conta pode ser inativada sem reservas confirmadas.
 def _pode_inativar_conta(user):
-    reservas_ativas = _obter_reservas_ativas_do_utilizador(user.id)
+    reservas_ativas = _reservas_ativas_user(user.id)
     reservas_confirmadas = [reserva for reserva in reservas_ativas if reserva.estado == EstadoReserva.confirmada]
 
     if reservas_confirmadas:
@@ -99,7 +283,8 @@ def _pode_inativar_conta(user):
     return True, None
 
 
-def _build_user_form_data(user, form_data):
+# Junta dados atuais e enviados para voltar a mostrar o formulario.
+def _dados_form_user(user, form_data):
     return {
         "nome": form_data.get("nome", user.nome),
         "username": form_data.get("username", user.username),
@@ -131,8 +316,8 @@ def espacos_homepage():
     if session.get("is_admin"):
         return redirect(url_for("main.admin_dashboard"))
 
-    current_user = _get_current_user()
-    espacos_destaque, mostrar_botao_mais_espacos = _espacos_homepage()
+    current_user = _utilizador_atual()
+    espacos_destaque, mostrar_botao_mais_espacos = _destaques_homepage()
 
     return render_template(
         "index.html",
@@ -152,7 +337,7 @@ def admin_dashboard():
         flash("Acesso restrito ao administrador", "danger")
         return redirect(url_for("main.index"))
 
-    current_user = _get_current_user()
+    current_user = _utilizador_atual()
     now = datetime.now()
     inicio_hoje = datetime(now.year, now.month, now.day)
     inicio_amanha = inicio_hoje + timedelta(days=1)
@@ -225,6 +410,13 @@ def admin_dashboard():
             "botao": "Ver reservas",
             "icone": "calendar",
         },
+        {
+            "titulo": "Estatísticas do Sistema",
+            "texto": "Visualiza dados da plataforma como reservas, faturação e utilização dos espaços.",
+            "rota": url_for("main.estatisticas_sistema"),
+            "botao": "Abrir estatísticas",
+            "icone": "analytics",
+        },
     ]
 
     return render_template(
@@ -232,6 +424,73 @@ def admin_dashboard():
         current_user=current_user,
         summary_cards=summary_cards,
         admin_links=admin_links,
+    )
+
+
+@main_bp.route("/admin/estatisticas")
+def estatisticas_sistema():
+    admin_redirect = _exigir_admin()
+    if admin_redirect:
+        return admin_redirect
+
+    periodos = {
+        "hoje": "Hoje",
+        "mes": "Este mês",
+        "mes_passado": "Mês passado",
+        "ano": "Este ano",
+        "ano_passado": "Ano passado",
+        "todos": "Todos",
+        "personalizado": "Personalizado",
+    }
+    periodo = request.args.get("periodo", "mes").strip()
+    if periodo not in periodos:
+        periodo = "mes"
+
+    data_inicio = _parse_data_filtro(request.args.get("data_inicio", "").strip())
+    data_fim = _parse_data_filtro(request.args.get("data_fim", "").strip())
+
+    if periodo == "personalizado":
+        if not data_inicio or not data_fim:
+            flash("Escolhe a data inicial e a data final para o periodo personalizado.", "danger")
+        elif data_inicio > data_fim:
+            flash("A data inicial deve ser anterior ou igual a data final.", "danger")
+            data_inicio = None
+            data_fim = None
+
+    espacos = Espaco.query.order_by(Espaco.nome.asc()).all()
+    espaco_id = request.args.get("espaco", type=int)
+    espaco_selecionado = None
+
+    if espaco_id:
+        espaco_selecionado = Espaco.query.get(espaco_id)
+        if not espaco_selecionado:
+            espaco_id = None
+
+    inicio_periodo, fim_periodo = _intervalo_periodo(periodo, data_inicio, data_fim)
+    estatisticas_espaco = _stats_espaco(espaco_id, inicio_periodo, fim_periodo)
+    resumo_global = _stats_globais(inicio_periodo, fim_periodo)
+    periodo_label = _label_periodo(periodo, periodos, data_inicio, data_fim)
+
+    contexto_espaco = {
+        "nome": espaco_selecionado.nome if espaco_selecionado else "Todos os espaços",
+        "modalidade": (espaco_selecionado.modalidade or "Espaço desportivo").strip() if espaco_selecionado else "Visão agregada",
+        "imagem": _imagem_segura(espaco_selecionado.imagem if espaco_selecionado else None),
+    }
+
+    return render_template(
+        "estatisticas.html",
+        espacos=espacos,
+        filtros={
+            "espaco": espaco_id or "",
+            "periodo": periodo,
+            "data_inicio": data_inicio.isoformat() if data_inicio else "",
+            "data_fim": data_fim.isoformat() if data_fim else "",
+        },
+        periodos=periodos,
+        periodo_label=periodo_label,
+        contexto_espaco=contexto_espaco,
+        estatisticas_espaco=estatisticas_espaco,
+        resumo_global=resumo_global,
     )
 
 
@@ -287,7 +546,7 @@ def perfil_utilizador():
         return redirect(url_for("auth.login_page"))
 
     user = User.query.get(session["user_id"])
-    return _render_editar_utilizador_form(user, _build_user_form_data(user, {}))
+    return _render_form_utilizador(user, _dados_form_user(user, {}))
 
 
 @main_bp.route("/editar-utilizador/<int:user_id>")
@@ -301,7 +560,7 @@ def editar_utilizador_page(user_id):
         return redirect(url_for("main.index"))
 
     user = User.query.get_or_404(user_id)
-    return _render_editar_utilizador_form(user, _build_user_form_data(user, {}))
+    return _render_form_utilizador(user, _dados_form_user(user, {}))
 
 
 @main_bp.route("/editar-utilizador/<int:user_id>", methods=["POST"])
@@ -334,34 +593,34 @@ def editar_utilizador(user_id):
 
     if not nome or not username or not email or not data_str or not estado:
         flash("Todos os campos obrigatorios devem ser preenchidos.", "danger")
-        return _render_editar_utilizador_form(user, form_data)
+        return _render_form_utilizador(user, form_data)
 
     if estado not in {"ativo", "inativo"}:
         flash("Estado invalido.", "danger")
-        return _render_editar_utilizador_form(user, form_data)
+        return _render_form_utilizador(user, form_data)
 
     data_nascimento = _parse_data_nascimento(data_str)
     if data_nascimento is None:
         flash("Data de nascimento invalida.", "danger")
-        return _render_editar_utilizador_form(user, form_data)
+        return _render_form_utilizador(user, form_data)
 
     if data_nascimento > date.today():
         flash("Data de nascimento invalida.", "danger")
-        return _render_editar_utilizador_form(user, form_data)
+        return _render_form_utilizador(user, form_data)
 
-    if not _email_e_valido(email):
+    if not _email_valido(email):
         flash("Email invalido.", "danger")
-        return _render_editar_utilizador_form(user, form_data)
+        return _render_form_utilizador(user, form_data)
 
     existe_username = User.query.filter(User.username == username, User.id != user.id).first()
     if existe_username:
         flash("Username ja existe.", "danger")
-        return _render_editar_utilizador_form(user, form_data)
+        return _render_form_utilizador(user, form_data)
 
     existe_email = User.query.filter(User.email == email, User.id != user.id).first()
     if existe_email:
         flash("Email ja existe.", "danger")
-        return _render_editar_utilizador_form(user, form_data)
+        return _render_form_utilizador(user, form_data)
 
     if not is_self_edit:
         nova_password = ""
@@ -370,10 +629,10 @@ def editar_utilizador(user_id):
         password_error = _validar_password(nova_password)
         if password_error:
             flash(password_error, "danger")
-            return _render_editar_utilizador_form(user, form_data)
+            return _render_form_utilizador(user, form_data)
 
     estado_atual = user.estado
-    novo_estado = _normalizar_estado_utilizador(estado)
+    novo_estado = _normalizar_estado_user(estado)
 
     user.nome = nome
     user.username = username
@@ -389,7 +648,7 @@ def editar_utilizador(user_id):
         if not pode_inativar:
             db.session.rollback()
             flash(mensagem, "danger")
-            return _render_editar_utilizador_form(user, form_data)
+            return _render_form_utilizador(user, form_data)
 
     user.estado = novo_estado
     db.session.commit()
@@ -427,7 +686,7 @@ def alterar_estado_utilizador(user_id):
         flash("Estado invalido.", "danger")
         return redirect(url_for("main.listar_utilizadores"))
 
-    estado_enum = _normalizar_estado_utilizador(novo_estado)
+    estado_enum = _normalizar_estado_user(novo_estado)
     if user.estado == estado_enum:
         return redirect(url_for("main.listar_utilizadores"))
 

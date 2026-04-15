@@ -49,6 +49,7 @@
                   <a class="admin-profile-link" href="{{ url_for('main.listar_utilizadores') }}">Gerir utilizadores</a>
                   <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Gerir espacos</a>
                   <a class="admin-profile-link" href="{{ url_for('reservas.listar_reservas') }}">Consultar reservas</a>
+                  <a class="admin-profile-link" href="{{ url_for('main.estatisticas_sistema') }}">Estat&iacute;sticas do Sistema</a>
                 {% else %}
                   <a class="admin-profile-link" href="{{ url_for('main.espacos_homepage') }}">Inicio</a>
                   <a class="admin-profile-link" href="{{ url_for('reservas.minha_reservas') }}">As minhas reservas</a>

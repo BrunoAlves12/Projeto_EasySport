@@ -10,15 +10,18 @@ from app.models import EstadoReserva, Espaco, Pagamento, Reserva, User
 pagamentos_bp = Blueprint("pagamentos", __name__)
 
 
-def _utilizador_autorizado_para_reserva(reserva):
+# Confirma se o utilizador atual pode aceder a reserva.
+def _pode_ver_reserva(reserva):
     return session.get("is_admin") or reserva.idUser == session.get("user_id")
 
 
-def _ultimos_quatro_digitos(numero_cartao):
+# Guarda apenas os ultimos quatro digitos do cartao.
+def _ultimos4_cartao(numero_cartao):
     digitos = "".join(char for char in numero_cartao if char.isdigit())
     return digitos[-4:] if len(digitos) >= 4 else ""
 
 
+# Valida os dados sensiveis do pagamento no backend.
 def _validar_dados_pagamento(form_data):
     numero_cartao = "".join(char for char in form_data["numeroCartao"] if char.isdigit())
     cvv = "".join(char for char in form_data["cvv"] if char.isdigit())
@@ -35,6 +38,11 @@ def _validar_dados_pagamento(form_data):
     if mes < 1 or mes > 12:
         return "Introduz um mes de validade entre 01 e 12."
 
+    ano = 2000 + int(validade_match.group(2))
+    agora = datetime.now()
+    if ano < agora.year or (ano == agora.year and mes < agora.month):
+        return "Introduz uma data de validade que ainda nao tenha expirado."
+
     if not re.fullmatch(r"\d{3,4}", cvv):
         return "Introduz um CVV com 3 ou 4 digitos."
 
@@ -44,7 +52,8 @@ def _validar_dados_pagamento(form_data):
     return None
 
 
-def _build_checkout_context(reserva, pagamento):
+# Prepara os dados usados pelo template de checkout.
+def _contexto_checkout(reserva, pagamento):
     espaco = Espaco.query.get(reserva.idEspaco)
     utilizador = User.query.get(reserva.idUser)
     duracao_horas = int((reserva.dataFim - reserva.dataInicio).total_seconds() / 3600)
@@ -84,7 +93,8 @@ def _build_checkout_context(reserva, pagamento):
     }
 
 
-def _reserva_tem_conflito_confirmado(reserva):
+# Verifica se outra reserva confirmada ocupa o mesmo horario.
+def _tem_conflito_confirmado(reserva):
     conflito = Reserva.query.filter(
         Reserva.id != reserva.id,
         Reserva.idEspaco == reserva.idEspaco,
@@ -96,7 +106,8 @@ def _reserva_tem_conflito_confirmado(reserva):
     return conflito is not None
 
 
-def _cancelar_reserva_pendente_por_conflito(reserva, pagamento):
+# Cancela a reserva pendente quando o horario deixou de estar livre.
+def _cancelar_por_conflito(reserva, pagamento):
     if reserva.estado == EstadoReserva.pendente:
         reserva.estado = EstadoReserva.cancelada
 
@@ -120,7 +131,7 @@ def checkout_reserva(reserva_id):
         return redirect(url_for("auth.login_page"))
 
     reserva = Reserva.query.get_or_404(reserva_id)
-    if not _utilizador_autorizado_para_reserva(reserva):
+    if not _pode_ver_reserva(reserva):
         flash("Acesso restrito", "danger")
         return redirect(url_for("main.index"))
 
@@ -134,10 +145,10 @@ def checkout_reserva(reserva_id):
         flash("Esta reserva ja se encontra paga", "success")
         return redirect(url_for("reservas.minha_reservas"))
 
-    if _reserva_tem_conflito_confirmado(reserva):
-        return _cancelar_reserva_pendente_por_conflito(reserva, pagamento)
+    if _tem_conflito_confirmado(reserva):
+        return _cancelar_por_conflito(reserva, pagamento)
 
-    return render_template("checkout_pagamento.html", **_build_checkout_context(reserva, pagamento))
+    return render_template("checkout_pagamento.html", **_contexto_checkout(reserva, pagamento))
 
 
 @pagamentos_bp.route("/checkout/<int:reserva_id>", methods=["POST"])
@@ -146,7 +157,7 @@ def processar_checkout_reserva(reserva_id):
         return redirect(url_for("auth.login_page"))
 
     reserva = Reserva.query.get_or_404(reserva_id)
-    if not _utilizador_autorizado_para_reserva(reserva):
+    if not _pode_ver_reserva(reserva):
         flash("Acesso restrito", "danger")
         return redirect(url_for("main.index"))
 
@@ -160,8 +171,8 @@ def processar_checkout_reserva(reserva_id):
         flash("Esta reserva ja se encontra paga", "success")
         return redirect(url_for("reservas.minha_reservas"))
 
-    if _reserva_tem_conflito_confirmado(reserva):
-        return _cancelar_reserva_pendente_por_conflito(reserva, pagamento)
+    if _tem_conflito_confirmado(reserva):
+        return _cancelar_por_conflito(reserva, pagamento)
 
     form_data = {
         "nomeFaturacao": request.form.get("nomeFaturacao", "").strip(),
@@ -177,18 +188,18 @@ def processar_checkout_reserva(reserva_id):
 
     if not all(form_data.values()):
         flash("Preenche todos os dados de faturacao e pagamento", "danger")
-        context = _build_checkout_context(reserva, pagamento)
+        context = _contexto_checkout(reserva, pagamento)
         context["form_data"] = form_data
         return render_template("checkout_pagamento.html", **context)
 
     mensagem_validacao = _validar_dados_pagamento(form_data)
     if mensagem_validacao:
         flash(mensagem_validacao, "danger")
-        context = _build_checkout_context(reserva, pagamento)
+        context = _contexto_checkout(reserva, pagamento)
         context["form_data"] = form_data
         return render_template("checkout_pagamento.html", **context)
 
-    ultimos4 = _ultimos_quatro_digitos(form_data["numeroCartao"])
+    ultimos4 = _ultimos4_cartao(form_data["numeroCartao"])
 
     pagamento.nomeFaturacao = form_data["nomeFaturacao"]
     pagamento.emailFaturacao = form_data["emailFaturacao"]

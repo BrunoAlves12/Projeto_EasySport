@@ -67,9 +67,15 @@
         message = "Introduz a validade no formato MM/AA.";
       } else {
         const month = Number.parseInt(match[1], 10);
+        const year = 2000 + Number.parseInt(match[2], 10);
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
 
         if (month < 1 || month > 12) {
           message = "Introduz um mes de validade entre 01 e 12.";
+        } else if (year < currentYear || (year === currentYear && month < currentMonth)) {
+          message = "Introduz uma data de validade que ainda nao tenha expirado.";
         }
       }
     }

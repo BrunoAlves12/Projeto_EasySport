@@ -30,19 +30,22 @@ MESES_PT = [
 ]
 
 
-def _obter_espacos_ativos():
+# Lista espacos ativos para reserva.
+def _espacos_ativos():
     return Espaco.query.filter_by(ativo=True).order_by(Espaco.nome.asc()).all()
 
 
-def _obter_espaco_por_id(espaco_id):
+# Procura um espaco ativo pelo id recebido.
+def _espaco_ativo(espaco_id):
     if not espaco_id:
         return None
 
     return Espaco.query.filter_by(id=espaco_id, ativo=True).first()
 
 
-def _construir_contexto_reservar(selected_espaco=None, checkout_prompt=None):
-    espacos = _obter_espacos_ativos()
+# Prepara os dados iniciais da pagina de reserva.
+def _contexto_reserva(selected_espaco=None, checkout_prompt=None):
+    espacos = _espacos_ativos()
     hoje = date.today()
 
     return {
@@ -61,13 +64,15 @@ def _construir_contexto_reservar(selected_espaco=None, checkout_prompt=None):
     }
 
 
-def _query_reservas_confirmadas(espaco_id):
+# Query base para reservas confirmadas de um espaco.
+def _reservas_confirmadas_query(espaco_id):
     return Reserva.query.filter(
         Reserva.idEspaco == espaco_id,
         Reserva.estado == EstadoReserva.confirmada,
     )
 
 
+# Converte datas simples enviadas pela interface.
 def _parse_data_reserva(data_str):
     if not data_str:
         return None
@@ -78,6 +83,7 @@ def _parse_data_reserva(data_str):
         return None
 
 
+# Converte datas e horas vindas dos inputs locais.
 def _parse_datetime_local(value):
     if not value:
         return None
@@ -88,10 +94,12 @@ def _parse_datetime_local(value):
         return None
 
 
+# Calcula a abertura do espaco no dia.
 def _inicio_funcionamento(data_reserva):
     return datetime.combine(data_reserva, time(hour=HORA_ABERTURA))
 
 
+# Calcula o fecho do espaco no dia.
 def _fim_funcionamento(data_reserva):
     if HORA_FECHO == 24:
         return datetime.combine(data_reserva + timedelta(days=1), time.min)
@@ -99,6 +107,7 @@ def _fim_funcionamento(data_reserva):
     return datetime.combine(data_reserva, time(hour=HORA_FECHO))
 
 
+# Formata horas inteiras como texto HH:MM.
 def _formatar_hora(hour_value):
     if hour_value == 24:
         return "00:00"
@@ -106,18 +115,21 @@ def _formatar_hora(hour_value):
     return f"{hour_value:02d}:00"
 
 
-def _reservas_do_periodo(espaco_id, inicio_periodo, fim_periodo):
-    return _query_reservas_confirmadas(espaco_id).filter(
+# Lista reservas que cruzam um intervalo.
+def _reservas_periodo(espaco_id, inicio_periodo, fim_periodo):
+    return _reservas_confirmadas_query(espaco_id).filter(
         Reserva.dataInicio < fim_periodo,
         Reserva.dataFim > inicio_periodo,
     ).all()
 
 
-def _intervalo_conflita(reservas, inicio, fim):
+# Verifica se um intervalo colide com reservas existentes.
+def _tem_conflito(reservas, inicio, fim):
     return any(reserva.dataInicio < fim and reserva.dataFim > inicio for reserva in reservas)
 
 
-def _duracoes_validas_para_inicio(inicio_slot, fim_funcionamento, reservas):
+# Calcula as duracoes livres a partir de uma hora inicial.
+def _duracoes_validas(inicio_slot, fim_funcionamento, reservas):
     duracoes = []
     duracao = DURACAO_MINIMA_HORAS
 
@@ -127,7 +139,7 @@ def _duracoes_validas_para_inicio(inicio_slot, fim_funcionamento, reservas):
         if fim_slot > fim_funcionamento:
             break
 
-        if _intervalo_conflita(reservas, inicio_slot, fim_slot):
+        if _tem_conflito(reservas, inicio_slot, fim_slot):
             break
 
         duracoes.append(
@@ -144,11 +156,12 @@ def _duracoes_validas_para_inicio(inicio_slot, fim_funcionamento, reservas):
     return duracoes
 
 
-def _obter_opcoes_do_dia(espaco, data_reserva):
+# Monta a disponibilidade de um espaco para um dia.
+def _opcoes_dia(espaco, data_reserva):
     agora = datetime.now()
     inicio_funcionamento = _inicio_funcionamento(data_reserva)
     fim_funcionamento = _fim_funcionamento(data_reserva)
-    reservas = _reservas_do_periodo(espaco.id, inicio_funcionamento, fim_funcionamento)
+    reservas = _reservas_periodo(espaco.id, inicio_funcionamento, fim_funcionamento)
 
     inicios = []
     total_slots_unitarios = 0
@@ -159,7 +172,7 @@ def _obter_opcoes_do_dia(espaco, data_reserva):
         total_slots_unitarios += 1
 
         if hora_cursor >= agora:
-            duracoes = _duracoes_validas_para_inicio(hora_cursor, fim_funcionamento, reservas)
+            duracoes = _duracoes_validas(hora_cursor, fim_funcionamento, reservas)
         else:
             duracoes = []
 
@@ -193,6 +206,7 @@ def _obter_opcoes_do_dia(espaco, data_reserva):
     }
 
 
+# Serializa dados basicos do espaco para as APIs.
 def _serializar_espaco(espaco):
     return {
         "id": espaco.id,
@@ -206,15 +220,18 @@ def _serializar_espaco(espaco):
     }
 
 
-def _reserva_respeita_funcionamento(inicio, fim):
+# Confirma se uma reserva fica dentro do horario permitido.
+def _dentro_horario(inicio, fim):
     data_reserva = inicio.date()
     return inicio >= _inicio_funcionamento(data_reserva) and fim <= _fim_funcionamento(data_reserva)
 
 
-def _get_pagamentos_por_reserva():
+# Indexa pagamentos pelo id da reserva.
+def _pagamentos_por_reserva():
     return {pagamento.idReserva: pagamento for pagamento in Pagamento.query.all()}
 
 
+# Texto legivel para o estado da reserva.
 def _estado_reserva_label(estado):
     labels = {
         EstadoReserva.pendente: "Pendente",
@@ -224,6 +241,7 @@ def _estado_reserva_label(estado):
     return labels.get(estado, "Sem estado")
 
 
+# Texto legivel para o estado do pagamento.
 def _estado_pagamento_label(estado):
     labels = {
         "pendente": "Pendente",
@@ -233,6 +251,7 @@ def _estado_pagamento_label(estado):
     return labels.get(estado or "pendente", "Pendente")
 
 
+# Formata valores monetarios para a interface.
 def _formatar_preco(valor):
     if valor is None:
         return "-"
@@ -240,11 +259,13 @@ def _formatar_preco(valor):
     return f"{valor:.2f} EUR"
 
 
+# Calcula a duracao de uma reserva em horas.
 def _duracao_reserva_horas(reserva):
     return (reserva.dataFim - reserva.dataInicio).total_seconds() / 3600
 
 
-def _obter_ou_criar_pagamento_reserva(reserva, valor=None):
+# Garante que uma reserva tem um pagamento associado.
+def _pagamento_reserva(reserva, valor=None):
     pagamento = Pagamento.query.filter_by(idReserva=reserva.id).first()
 
     if pagamento:
@@ -262,7 +283,8 @@ def _obter_ou_criar_pagamento_reserva(reserva, valor=None):
     return pagamento
 
 
-def _build_checkout_context(reserva, pagamento=None):
+# Prepara o resumo usado no checkout.
+def _contexto_checkout(reserva, pagamento=None):
     espaco = Espaco.query.get(reserva.idEspaco)
     utilizador = User.query.get(reserva.idUser)
     duracao_horas = _duracao_reserva_horas(reserva)
@@ -306,8 +328,9 @@ def _build_checkout_context(reserva, pagamento=None):
     }
 
 
-def _build_checkout_prompt(reserva, pagamento):
-    contexto = _build_checkout_context(reserva, pagamento)
+# Prepara o aviso mostrado depois de criar uma reserva.
+def _prompt_checkout(reserva, pagamento):
+    contexto = _contexto_checkout(reserva, pagamento)
     return {
         "reserva_id": reserva.id,
         "titulo": "Reserva criada com sucesso",
@@ -316,7 +339,8 @@ def _build_checkout_prompt(reserva, pagamento):
     }
 
 
-def _build_reserva_view_models(reservas, users, espacos, pagamentos):
+# Converte reservas em dados prontos para o template.
+def _reservas_view(reservas, users, espacos, pagamentos):
     reservas_view = []
 
     for reserva in reservas:
@@ -369,7 +393,8 @@ def _build_reserva_view_models(reservas, users, espacos, pagamentos):
     return reservas_view
 
 
-def _apply_reserva_filters(reservas_view, filtros):
+# Aplica os filtros da listagem de reservas.
+def _filtrar_reservas(reservas_view, filtros):
     resultado = reservas_view
     pesquisa = filtros["q"]
     estado = filtros["estado"]
@@ -398,7 +423,8 @@ def _apply_reserva_filters(reservas_view, filtros):
     return resultado
 
 
-def _build_reservas_summary(reservas_view):
+# Calcula os cartoes de resumo das reservas.
+def _resumo_reservas(reservas_view):
     hoje = date.today().isoformat()
 
     return [
@@ -435,7 +461,7 @@ def reservar_page():
         return redirect(url_for("auth.login_page"))
 
     espaco_id_selecionado = request.args.get("espaco_id", type=int)
-    selected_espaco = _obter_espaco_por_id(espaco_id_selecionado)
+    selected_espaco = _espaco_ativo(espaco_id_selecionado)
     checkout_prompt = None
     prompt_reserva_id = session.pop("checkout_prompt_reserva_id", None)
 
@@ -443,10 +469,10 @@ def reservar_page():
         reserva = Reserva.query.filter_by(id=prompt_reserva_id, idUser=session["user_id"]).first()
         if reserva:
             pagamento = Pagamento.query.filter_by(idReserva=reserva.id).first()
-            checkout_prompt = _build_checkout_prompt(reserva, pagamento)
-            selected_espaco = selected_espaco or _obter_espaco_por_id(reserva.idEspaco)
+            checkout_prompt = _prompt_checkout(reserva, pagamento)
+            selected_espaco = selected_espaco or _espaco_ativo(reserva.idEspaco)
 
-    return render_template("reservar.html", **_construir_contexto_reservar(selected_espaco, checkout_prompt))
+    return render_template("reservar.html", **_contexto_reserva(selected_espaco, checkout_prompt))
 
 
 @reservas_bp.route("/api/espacos/<int:espaco_id>/calendario-mensal")
@@ -454,7 +480,7 @@ def calendario_mensal(espaco_id):
     if "user_id" not in session:
         return jsonify({"erro": "Sessão inválida"}), 401
 
-    espaco = _obter_espaco_por_id(espaco_id)
+    espaco = _espaco_ativo(espaco_id)
     if not espaco:
         return jsonify({"erro": "Espaço não encontrado"}), 404
 
@@ -475,7 +501,7 @@ def calendario_mensal(espaco_id):
 
     for numero_dia in range(1, total_dias + 1):
         data_reserva = date(ano, mes, numero_dia)
-        opcoes = _obter_opcoes_do_dia(espaco, data_reserva)
+        opcoes = _opcoes_dia(espaco, data_reserva)
 
         dias.append(
             {
@@ -502,7 +528,7 @@ def disponibilidade_dia(espaco_id):
     if "user_id" not in session:
         return jsonify({"erro": "Sessão inválida"}), 401
 
-    espaco = _obter_espaco_por_id(espaco_id)
+    espaco = _espaco_ativo(espaco_id)
     if not espaco:
         return jsonify({"erro": "Espaço não encontrado"}), 404
 
@@ -513,7 +539,7 @@ def disponibilidade_dia(espaco_id):
     if data_reserva < date.today():
         return jsonify({"erro": "Não é possível reservar datas no passado"}), 400
 
-    opcoes = _obter_opcoes_do_dia(espaco, data_reserva)
+    opcoes = _opcoes_dia(espaco, data_reserva)
 
     return jsonify(
         {
@@ -536,7 +562,7 @@ def criar_reserva():
     inicio = _parse_datetime_local(request.form.get("inicio", "").strip())
     fim = _parse_datetime_local(request.form.get("fim", "").strip())
 
-    espaco = _obter_espaco_por_id(espaco_id)
+    espaco = _espaco_ativo(espaco_id)
     if not espaco:
         flash("Espaço inválido", "danger")
         return redirect(url_for("reservas.reservar_page"))
@@ -558,12 +584,12 @@ def criar_reserva():
         flash("Escolhe uma duração válida para esta reserva", "danger")
         return redirect(url_for("reservas.reservar_page", espaco_id=espaco_id))
 
-    if not _reserva_respeita_funcionamento(inicio, fim):
+    if not _dentro_horario(inicio, fim):
         flash("A reserva tem de respeitar o horário de funcionamento do espaço", "danger")
         return redirect(url_for("reservas.reservar_page", espaco_id=espaco_id))
 
-    reservas = _reservas_do_periodo(espaco_id, _inicio_funcionamento(inicio.date()), _fim_funcionamento(inicio.date()))
-    if _intervalo_conflita(reservas, inicio, fim):
+    reservas = _reservas_periodo(espaco_id, _inicio_funcionamento(inicio.date()), _fim_funcionamento(inicio.date()))
+    if _tem_conflito(reservas, inicio, fim):
         flash("Já existe uma reserva para este espaço nesse intervalo", "danger")
         return redirect(url_for("reservas.reservar_page", espaco_id=espaco_id))
 
@@ -579,7 +605,7 @@ def criar_reserva():
     db.session.flush()
 
     valor = duracao_horas * espaco.precoHora
-    pagamento = _obter_ou_criar_pagamento_reserva(reserva, valor=valor)
+    pagamento = _pagamento_reserva(reserva, valor=valor)
     pagamento.estado = "pendente"
 
     db.session.commit()
@@ -608,14 +634,14 @@ def listar_reservas():
     reservas = Reserva.query.order_by(Reserva.dataInicio.desc()).all()
     users = {u.id: u for u in User.query.all()}
     espacos = {e.id: e for e in Espaco.query.all()}
-    pagamentos = _get_pagamentos_por_reserva()
-    reservas_view = _build_reserva_view_models(reservas, users, espacos, pagamentos)
-    reservas_filtradas = _apply_reserva_filters(reservas_view, filtros)
+    pagamentos = _pagamentos_por_reserva()
+    reservas_view = _reservas_view(reservas, users, espacos, pagamentos)
+    reservas_filtradas = _filtrar_reservas(reservas_view, filtros)
 
     return render_template(
         "listar_reservas.html",
         reservas=reservas_filtradas,
-        summary_cards=_build_reservas_summary(reservas_view),
+        summary_cards=_resumo_reservas(reservas_view),
         filtros=filtros,
         espaco_opcoes=sorted({reserva["espaco"] for reserva in reservas_view}),
         is_admin_view=True,
@@ -657,8 +683,8 @@ def minha_reservas():
     reservas = Reserva.query.filter_by(idUser=session["user_id"]).order_by(Reserva.dataInicio.desc()).all()
     users = {u.id: u for u in User.query.filter_by(isAdmin=False).all()}
     espacos = {e.id: e for e in Espaco.query.all()}
-    pagamentos = _get_pagamentos_por_reserva()
-    reservas_view = _build_reserva_view_models(reservas, users, espacos, pagamentos)
+    pagamentos = _pagamentos_por_reserva()
+    reservas_view = _reservas_view(reservas, users, espacos, pagamentos)
 
     return render_template(
         "listar_reservas.html",

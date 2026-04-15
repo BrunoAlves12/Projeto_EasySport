@@ -9,14 +9,17 @@ from app.models import EstadoUser, User
 auth_bp = Blueprint("auth", __name__)
 
 
-def _render_register_form(form_data=None):
+# Renderiza o formulario de registo mantendo os dados enviados.
+def _render_registo(form_data=None):
     return render_template("registar.html", form_data=form_data or {})
 
 
-def _render_login_form(form_data=None):
+# Renderiza o formulario de login mantendo o identificador enviado.
+def _render_login(form_data=None):
     return render_template("login.html", form_data=form_data or {})
 
 
+# Termina sessoes de contas que ficaram inativas.
 @auth_bp.before_app_request
 def impedir_sessao_de_conta_inativa():
     endpoint = request.endpoint or ""
@@ -39,6 +42,7 @@ def impedir_sessao_de_conta_inativa():
     return None
 
 
+# Valida as regras minimas da password.
 def _validar_password(password):
     if len(password) < 8 or len(password) > 15:
         return "A password precisa de ter entre 8 e 15 caracteres."
@@ -67,7 +71,7 @@ def _validar_password(password):
 
 @auth_bp.route("/register", methods=["GET"])
 def register_page():
-    return _render_register_form()
+    return _render_registo()
 
 
 @auth_bp.route("/register", methods=["POST"])
@@ -87,40 +91,40 @@ def register():
 
     if not nome or not email or not password or not username or not data_str:
         flash("Todos os campos sao obrigatorios!", "danger")
-        return _render_register_form(form_data)
+        return _render_registo(form_data)
 
     try:
         data_nascimento = datetime.strptime(data_str, "%Y-%m-%d").date()
     except ValueError:
         flash("Data de nascimento invalida", "danger")
-        return _render_register_form(form_data)
+        return _render_registo(form_data)
 
     password_error = _validar_password(password)
     if password_error:
         flash(password_error, "danger")
-        return _render_register_form(form_data)
+        return _render_registo(form_data)
 
     if "@" not in email:
         flash("Email invalido!", "danger")
-        return _render_register_form(form_data)
+        return _render_registo(form_data)
 
     partes = email.split("@")
 
     if len(partes) != 2 or "." not in partes[1]:
         flash("Email invalido", "danger")
-        return _render_register_form(form_data)
+        return _render_registo(form_data)
 
     if User.query.filter_by(email=email).first():
         flash("Email ja registado", "danger")
-        return _render_register_form(form_data)
+        return _render_registo(form_data)
 
     if User.query.filter_by(username=username).first():
         flash("Username ja existe", "danger")
-        return _render_register_form(form_data)
+        return _render_registo(form_data)
 
     if data_nascimento > date.today():
         flash("Data de nascimento invalida", "danger")
-        return _render_register_form(form_data)
+        return _render_registo(form_data)
 
     user = User(
         nome=nome,
@@ -139,7 +143,7 @@ def register():
 
 @auth_bp.route("/login")
 def login_page():
-    return _render_login_form()
+    return _render_login()
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -150,7 +154,7 @@ def login():
 
     if not login_value or not password:
         flash("Preencha todos os campos", "danger")
-        return _render_login_form(form_data)
+        return _render_login(form_data)
 
     user = User.query.filter(
         or_(
@@ -161,11 +165,11 @@ def login():
 
     if not user or user.password != password:
         flash("Credenciais invalidas", "danger")
-        return _render_login_form(form_data)
+        return _render_login(form_data)
 
     if user.estado == EstadoUser.inativo:
         flash("A conta esta inativa. Nao e possivel iniciar sessao.", "danger")
-        return _render_login_form(form_data)
+        return _render_login(form_data)
 
     session["user_id"] = user.id
     session["username"] = user.username

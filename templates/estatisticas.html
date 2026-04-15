@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Estat&iacute;sticas do Sistema | EasySport</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reservas-admin.css') }}" />
+  </head>
+
+  <body class="admin-page">
+    <div class="admin-shell">
+      <header class="admin-header">
+        <a class="admin-brand" href="{{ url_for('main.admin_dashboard') }}">
+          <img
+            class="admin-brand__logo"
+            src="{{ url_for('static', filename='img/easysport-logo.png') }}"
+            alt="Logo EasySport"
+          />
+          <div>
+            <p class="admin-brand__eyebrow">Painel de estat&iacute;sticas</p>
+            <h1>EasySport</h1>
+          </div>
+        </a>
+
+        <div class="admin-userpanel">
+          <details class="admin-profile-menu">
+            <summary class="admin-profile-button">
+              <span class="admin-profile-avatar" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M12 12a4.25 4.25 0 1 0-4.25-4.25A4.25 4.25 0 0 0 12 12Zm0 2.25c-4.23 0-7.75 2.16-7.75 4.75a1 1 0 0 0 1 1h13.5a1 1 0 0 0 1-1c0-2.59-3.52-4.75-7.75-4.75Z" />
+                </svg>
+              </span>
+              <span class="admin-profile-content">
+                <span class="admin-profile-label">Administrador</span>
+                <strong>{{ session["username"] }}</strong>
+              </span>
+              <span class="admin-profile-chevron" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="m5.25 7.5 4.75 5 4.75-5" />
+                </svg>
+              </span>
+            </summary>
+
+            <div class="admin-profile-dropdown">
+              <a class="admin-profile-link" href="{{ url_for('main.admin_dashboard') }}">Painel principal</a>
+              <a class="admin-profile-link" href="{{ url_for('main.listar_utilizadores') }}">Gerir utilizadores</a>
+              <a class="admin-profile-link" href="{{ url_for('main.listar_espacos_page') }}">Gerir espa&ccedil;os</a>
+              <a class="admin-profile-link" href="{{ url_for('reservas.listar_reservas') }}">Consultar reservas</a>
+              <a class="admin-profile-link admin-profile-link--logout" href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+          </details>
+        </div>
+      </header>
+
+      <main class="admin-main stats-main">
+        {% with messages = get_flashed_messages(with_categories=True) %}
+          {% if messages %}
+            <div class="admin-messages flash-stack">
+              {% for category, message in messages %}
+                <div class="admin-alert admin-alert--{{ category }} flash-message" data-flash-message>
+                  <span class="flash-message__text">{{ message }}</span>
+                  <button class="flash-message__close" type="button" aria-label="Fechar notificacao" data-flash-close>&times;</button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <section class="admin-section">
+          <div class="reservations-panel stats-panel">
+            <div class="reservations-panel__header stats-panel__header">
+              <div>
+                <p class="admin-section__eyebrow">Estat&iacute;sticas do Sistema</p>
+                <h3>Vis&atilde;o global do desempenho da plataforma</h3>
+              </div>
+            </div>
+
+            <form class="reservations-filters stats-filters" method="get" action="{{ url_for('main.estatisticas_sistema') }}" novalidate>
+              <label class="reservations-field">
+                <span>Espa&ccedil;o</span>
+                <select name="espaco">
+                  <option value="">Todos</option>
+                  {% for espaco in espacos %}
+                    <option value="{{ espaco.id }}" {% if filtros.espaco == espaco.id %}selected{% endif %}>{{ espaco.nome }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+
+              <label class="reservations-field">
+                <span>Per&iacute;odo</span>
+                <select name="periodo">
+                  {% for valor, label in periodos.items() %}
+                    <option value="{{ valor }}" {% if filtros.periodo == valor %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+
+              <label class="reservations-field stats-custom-field" data-custom-period-field {% if filtros.periodo != "personalizado" %}hidden{% endif %}>
+                <span>Data inicial</span>
+                <input type="date" name="data_inicio" value="{{ filtros.data_inicio }}" {% if filtros.periodo != "personalizado" %}disabled{% endif %} />
+              </label>
+
+              <label class="reservations-field stats-custom-field" data-custom-period-field {% if filtros.periodo != "personalizado" %}hidden{% endif %}>
+                <span>Data final</span>
+                <input type="date" name="data_fim" value="{{ filtros.data_fim }}" {% if filtros.periodo != "personalizado" %}disabled{% endif %} />
+              </label>
+
+              <div class="reservations-filter-actions">
+                <button class="reservations-button reservations-button--primary" type="submit">Filtrar</button>
+                <a class="reservations-button reservations-button--ghost" href="{{ url_for('main.estatisticas_sistema') }}">Limpar</a>
+              </div>
+            </form>
+
+            <div class="admin-messages flash-stack stats-validation-messages" id="stats-validation-messages" hidden></div>
+          </div>
+        </section>
+
+        <section class="stats-grid">
+          <article class="stats-card stats-card--space">
+            <div class="stats-space-hero">
+              <img
+                class="stats-space-image"
+                src="{{ url_for('static', filename=contexto_espaco.imagem) }}"
+                alt="{{ contexto_espaco.nome }}"
+              />
+              <div class="stats-card__intro">
+                <p class="admin-section__eyebrow">Dados do espa&ccedil;o</p>
+                <h3>{{ contexto_espaco.nome }}</h3>
+                <div class="stats-meta">
+                  <span>{{ contexto_espaco.modalidade }}</span>
+                  <span>{{ periodo_label }}</span>
+                </div>
+              </div>
+            </div>
+
+            <dl class="stats-metrics">
+              <div>
+                <dt>N. de reservas</dt>
+                <dd>{{ estatisticas_espaco.total_reservas }}</dd>
+              </div>
+              <div>
+                <dt>Reservas confirmadas</dt>
+                <dd>{{ estatisticas_espaco.reservas_confirmadas }}</dd>
+              </div>
+              <div>
+                <dt>Reservas canceladas</dt>
+                <dd>{{ estatisticas_espaco.reservas_canceladas }}</dd>
+              </div>
+              <div>
+                <dt>Receita gerada</dt>
+                <dd>{{ estatisticas_espaco.receita_label }}</dd>
+              </div>
+              <div>
+                <dt>Dura&ccedil;&atilde;o m&eacute;dia</dt>
+                <dd>{{ estatisticas_espaco.duracao_media_label }}</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article class="stats-card">
+            <div class="stats-card__intro">
+              <p class="admin-section__eyebrow">Resumo global</p>
+              <h3>Sistema no per&iacute;odo</h3>
+              <div class="stats-meta">
+                <span>{{ periodo_label }}</span>
+              </div>
+            </div>
+
+            <dl class="stats-metrics stats-metrics--global">
+              <div>
+                <dt>Fatura&ccedil;&atilde;o total</dt>
+                <dd>{{ resumo_global.faturacao_total_label }}</dd>
+              </div>
+              <div>
+                <dt>Cliente com mais reservas</dt>
+                <dd>{{ resumo_global.cliente_top }}</dd>
+                <span>{{ resumo_global.cliente_top_total }} reservas</span>
+              </div>
+              <div>
+                <dt>Espa&ccedil;o mais reservado</dt>
+                <dd>{{ resumo_global.espaco_top }}</dd>
+                <span>{{ resumo_global.espaco_top_total }} reservas</span>
+              </div>
+            </dl>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        const profileMenu = document.querySelector(".admin-profile-menu");
+
+        if (!profileMenu) {
+          return;
+        }
+
+        document.addEventListener("click", (event) => {
+          if (!profileMenu.contains(event.target)) {
+            profileMenu.removeAttribute("open");
+          }
+        });
+      })();
+    </script>
+    <script>
+      (() => {
+        const form = document.querySelector(".stats-filters");
+        const periodoSelect = document.querySelector('select[name="periodo"]');
+        const customFields = document.querySelectorAll("[data-custom-period-field]");
+        const validationStack = document.getElementById("stats-validation-messages");
+        let validationTimeout = null;
+
+        if (!form || !periodoSelect || !customFields.length || !validationStack) {
+          return;
+        }
+
+        const clearValidationMessage = () => {
+          if (validationTimeout) {
+            clearTimeout(validationTimeout);
+            validationTimeout = null;
+          }
+
+          validationStack.hidden = true;
+          validationStack.innerHTML = "";
+        };
+
+        const showValidationMessage = (message) => {
+          validationStack.innerHTML = `
+            <div class="admin-alert admin-alert--danger flash-message" data-flash-message>
+              <span class="flash-message__text">${message}</span>
+              <button class="flash-message__close" type="button" aria-label="Fechar notificacao" data-flash-close>&times;</button>
+            </div>
+          `;
+          validationStack.hidden = false;
+
+          const closeButton = validationStack.querySelector("[data-flash-close]");
+          if (closeButton) {
+            closeButton.addEventListener("click", clearValidationMessage);
+          }
+
+          validationTimeout = setTimeout(clearValidationMessage, 5000);
+        };
+
+        const getCustomDates = () => ({
+          start: form.querySelector('input[name="data_inicio"]'),
+          end: form.querySelector('input[name="data_fim"]'),
+        });
+
+        const updateCustomFields = () => {
+          const showCustomFields = periodoSelect.value === "personalizado";
+
+          customFields.forEach((field) => {
+            field.hidden = !showCustomFields;
+            field.querySelectorAll("input").forEach((input) => {
+              input.disabled = !showCustomFields;
+            });
+          });
+
+          if (!showCustomFields) {
+            clearValidationMessage();
+          }
+        };
+
+        periodoSelect.addEventListener("change", updateCustomFields);
+
+        form.addEventListener("submit", (event) => {
+          clearValidationMessage();
+
+          if (periodoSelect.value !== "personalizado") {
+            return;
+          }
+
+          const { start, end } = getCustomDates();
+
+          if (!start.value || !end.value) {
+            event.preventDefault();
+            showValidationMessage("Preenche a data inicial e a data final para analisar um periodo personalizado.");
+            return;
+          }
+
+          if (start.value > end.value) {
+            event.preventDefault();
+            showValidationMessage("A data inicial deve ser anterior ou igual a data final.");
+          }
+        });
+
+        updateCustomFields();
+      })();
+    </script>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
+  </body>
+</html>

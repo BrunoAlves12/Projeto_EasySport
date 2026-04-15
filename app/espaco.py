@@ -12,7 +12,8 @@ espaco_bp = Blueprint("espaco", __name__)
 EXTENSOES_IMAGEM_PERMITIDAS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 
-def _guardar_imagem_espaco(imagem_file):
+# Guarda a imagem enviada para a pasta dos espacos.
+def _guardar_imagem(imagem_file):
     if not imagem_file or not imagem_file.filename:
         return current_app.config["ESPACO_IMAGEM_DEFAULT"]
 
@@ -30,17 +31,19 @@ def _guardar_imagem_espaco(imagem_file):
     return f"img/espacos/{nome_unico}"
 
 
-def _obter_imagem_para_espaco(imagem_file, imagem_atual=None):
+# Decide qual imagem deve ficar associada ao espaco.
+def _imagem_espaco(imagem_file, imagem_atual=None):
     if not imagem_file or not imagem_file.filename:
         if imagem_atual:
             return imagem_atual
 
         return current_app.config["ESPACO_IMAGEM_DEFAULT"]
 
-    return _guardar_imagem_espaco(imagem_file)
+    return _guardar_imagem(imagem_file)
 
 
-def _resolver_imagem_listagem(espaco):
+# Garante uma imagem valida para mostrar na listagem.
+def _imagem_listagem(espaco):
     imagem = espaco.imagem or current_app.config["ESPACO_IMAGEM_DEFAULT"]
     caminho_imagem = os.path.join(current_app.static_folder, imagem.replace("/", os.sep))
 
@@ -50,12 +53,14 @@ def _resolver_imagem_listagem(espaco):
     return imagem
 
 
-def _render_criar_espaco_form(form_data=None):
+# Renderiza o formulario de criacao com dados antigos.
+def _render_form_criar(form_data=None):
     return render_template("espaco.html", form_data=form_data or {})
 
 
-def _render_editar_espaco_form(espaco, form_data=None):
-    espaco.imagem_listagem = _resolver_imagem_listagem(espaco)
+# Renderiza o formulario de edicao com imagem segura.
+def _render_form_editar(espaco, form_data=None):
+    espaco.imagem_listagem = _imagem_listagem(espaco)
     return render_template("editar_espaco.html", espaco=espaco, form_data=form_data or {})
 
 
@@ -78,28 +83,28 @@ def criar_espaco():
         preco = float(preco_str)
     except Exception:
         flash("Preço inválido", "danger")
-        return _render_criar_espaco_form(form_data)
+        return _render_form_criar(form_data)
 
     if not nome:
         flash("Nome do espaço é obrigatório", "danger")
-        return _render_criar_espaco_form(form_data)
+        return _render_form_criar(form_data)
 
     if not modalidade:
         flash("Modalidade é obrigatória", "danger")
-        return _render_criar_espaco_form(form_data)
+        return _render_form_criar(form_data)
 
     if preco <= 0:
         flash("Preço inválido", "danger")
-        return _render_criar_espaco_form(form_data)
+        return _render_form_criar(form_data)
 
     if not session.get("is_admin"):
         flash("Acesso restrito ao admin", "danger")
         return redirect(url_for("main.index"))
 
-    imagem = _obter_imagem_para_espaco(imagem_file)
+    imagem = _imagem_espaco(imagem_file)
     if imagem_file and imagem is None:
         flash("Formato de imagem inválido", "danger")
-        return _render_criar_espaco_form(form_data)
+        return _render_form_criar(form_data)
 
     espaco = Espaco(
         nome=nome,
@@ -125,7 +130,7 @@ def listar_espacos():
         espacos = Espaco.query.filter_by(ativo=True).all()
 
     for espaco in espacos:
-        espaco.imagem_listagem = _resolver_imagem_listagem(espaco)
+        espaco.imagem_listagem = _imagem_listagem(espaco)
         espaco.modalidade_listagem = (espaco.modalidade or "Espaço desportivo").strip()
 
     return render_template("listar_espacos.html", espacos=espacos)
@@ -159,26 +164,26 @@ def editar_espaco(id):
 
         if not nome:
             flash("Nome do espaço é obrigatório", "danger")
-            return _render_editar_espaco_form(espaco, form_data)
+            return _render_form_editar(espaco, form_data)
 
         if not modalidade:
             flash("Modalidade é obrigatória", "danger")
-            return _render_editar_espaco_form(espaco, form_data)
+            return _render_form_editar(espaco, form_data)
 
         try:
             preco = float(preco_str)
         except Exception:
             flash("Preço inválido", "danger")
-            return _render_editar_espaco_form(espaco, form_data)
+            return _render_form_editar(espaco, form_data)
 
         if preco <= 0:
             flash("Preço inválido", "danger")
-            return _render_editar_espaco_form(espaco, form_data)
+            return _render_form_editar(espaco, form_data)
 
-        imagem = _obter_imagem_para_espaco(imagem_file, espaco.imagem)
+        imagem = _imagem_espaco(imagem_file, espaco.imagem)
         if imagem_file and imagem is None:
             flash("Formato de imagem inválido", "danger")
-            return _render_editar_espaco_form(espaco, form_data)
+            return _render_form_editar(espaco, form_data)
 
         espaco.nome = nome
         espaco.modalidade = modalidade
@@ -190,7 +195,7 @@ def editar_espaco(id):
         flash("Espaço editado com sucesso", "success")
         return redirect(url_for("espaco.listar_espacos"))
 
-    return _render_editar_espaco_form(espaco)
+    return _render_form_editar(espaco)
 
 
 @espaco_bp.route("/desativar-espaco/<int:id>")
