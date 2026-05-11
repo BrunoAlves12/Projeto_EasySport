@@ -4,8 +4,10 @@ import uuid
 from flask import Blueprint, current_app, request, redirect, url_for, flash, session, render_template
 from werkzeug.utils import secure_filename
 
+from app.access import admin_required, login_required
 from app.models import Espaco
 from app.extensions import db
+from app.security import imagem_segura
 
 espaco_bp = Blueprint("espaco", __name__)
 
@@ -44,13 +46,7 @@ def _imagem_espaco(imagem_file, imagem_atual=None):
 
 # Garante uma imagem valida para mostrar na listagem.
 def _imagem_listagem(espaco):
-    imagem = espaco.imagem or current_app.config["ESPACO_IMAGEM_DEFAULT"]
-    caminho_imagem = os.path.join(current_app.static_folder, imagem.replace("/", os.sep))
-
-    if not os.path.exists(caminho_imagem):
-        return current_app.config["ESPACO_IMAGEM_DEFAULT"]
-
-    return imagem
+    return imagem_segura(espaco.imagem)
 
 
 # Renderiza o formulario de criacao com dados antigos.
@@ -65,6 +61,7 @@ def _render_form_editar(espaco, form_data=None):
 
 
 @espaco_bp.route("/espaco", methods=["POST"])
+@admin_required
 def criar_espaco():
     nome = request.form.get("nome", "").strip()
     modalidade = request.form.get("modalidade", "").strip()
@@ -97,10 +94,6 @@ def criar_espaco():
         flash("Preço inválido", "danger")
         return _render_form_criar(form_data)
 
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao admin", "danger")
-        return redirect(url_for("main.index"))
-
     imagem = _imagem_espaco(imagem_file)
     if imagem_file and imagem is None:
         flash("Formato de imagem inválido", "danger")
@@ -123,6 +116,7 @@ def criar_espaco():
 
 
 @espaco_bp.route("/espaco", methods=["GET"])
+@login_required
 def listar_espacos():
     if session.get("is_admin"):
         espacos = Espaco.query.all()
@@ -137,11 +131,8 @@ def listar_espacos():
 
 
 @espaco_bp.route("/editar-espaco/<int:id>", methods=["GET", "POST"])
+@admin_required
 def editar_espaco(id):
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao admin", "danger")
-        return redirect(url_for("main.index"))
-
     espaco = Espaco.query.get(id)
 
     if not espaco:
@@ -198,12 +189,9 @@ def editar_espaco(id):
     return _render_form_editar(espaco)
 
 
-@espaco_bp.route("/desativar-espaco/<int:id>")
+@espaco_bp.route("/desativar-espaco/<int:id>", methods=["POST"])
+@admin_required
 def desativar_espaco(id):
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao admin", "danger")
-        return redirect(url_for("main.index"))
-
     espaco = Espaco.query.get(id)
 
     if not espaco:
@@ -217,12 +205,9 @@ def desativar_espaco(id):
     return redirect(url_for("espaco.listar_espacos"))
 
 
-@espaco_bp.route("/ativar-espaco/<int:id>")
+@espaco_bp.route("/ativar-espaco/<int:id>", methods=["POST"])
+@admin_required
 def ativar_espaco(id):
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao admin", "danger")
-        return redirect(url_for("main.index"))
-
     espaco = Espaco.query.get(id)
 
     if not espaco:

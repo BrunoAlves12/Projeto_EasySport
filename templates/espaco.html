@@ -61,6 +61,7 @@
           </div>
 
           <form class="spaces-form" action="/espaco" method="post" enctype="multipart/form-data" data-custom-validation="true" data-validation-stack-class="admin-messages flash-stack" data-validation-alert-class="admin-alert admin-alert--danger flash-message">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="spaces-form__field">
               <label for="nome">Nome</label>
               <input type="text" id="nome" name="nome" placeholder="Nome do espaço" value="{{ form_data.get('nome', '') }}" required />

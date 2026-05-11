@@ -1,11 +1,12 @@
-import os
 import re
 from datetime import datetime
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
+from app.access import login_required
 from app.extensions import db
 from app.models import EstadoReserva, Espaco, Pagamento, Reserva, User
+from app.security import imagem_segura
 
 pagamentos_bp = Blueprint("pagamentos", __name__)
 
@@ -23,10 +24,14 @@ def _ultimos4_cartao(numero_cartao):
 
 # Valida os dados sensiveis do pagamento no backend.
 def _validar_dados_pagamento(form_data):
-    numero_cartao = "".join(char for char in form_data["numeroCartao"] if char.isdigit())
-    cvv = "".join(char for char in form_data["cvv"] if char.isdigit())
-    validade = form_data["validade"]
+    numero_cartao_raw = form_data["numeroCartao"].strip()
+    validade = form_data["validade"].strip()
+    cvv = form_data["cvv"].strip()
 
+    if not re.fullmatch(r"[\d ]+", numero_cartao_raw):
+        return "O numero do cartao deve conter apenas numeros."
+
+    numero_cartao = numero_cartao_raw.replace(" ", "")
     if not numero_cartao.isdigit() or not 12 <= len(numero_cartao) <= 19:
         return "Introduz um numero de cartao valido com 12 a 19 digitos."
 
@@ -43,6 +48,9 @@ def _validar_dados_pagamento(form_data):
     if ano < agora.year or (ano == agora.year and mes < agora.month):
         return "Introduz uma data de validade que ainda nao tenha expirado."
 
+    if not cvv.isdigit():
+        return "O CVV deve conter apenas numeros."
+
     if not re.fullmatch(r"\d{3,4}", cvv):
         return "Introduz um CVV com 3 ou 4 digitos."
 
@@ -57,12 +65,7 @@ def _contexto_checkout(reserva, pagamento):
     espaco = Espaco.query.get(reserva.idEspaco)
     utilizador = User.query.get(reserva.idUser)
     duracao_horas = int((reserva.dataFim - reserva.dataInicio).total_seconds() / 3600)
-    imagem_espaco = current_app.config["ESPACO_IMAGEM_DEFAULT"]
-
-    if espaco and espaco.imagem:
-        caminho_imagem = os.path.join(current_app.static_folder, espaco.imagem.replace("/", os.sep))
-        if os.path.exists(caminho_imagem):
-            imagem_espaco = espaco.imagem
+    imagem_espaco = imagem_segura(espaco.imagem if espaco else None)
 
     return {
         "reserva": reserva,
@@ -126,10 +129,8 @@ def _cancelar_por_conflito(reserva, pagamento):
 
 
 @pagamentos_bp.route("/checkout/<int:reserva_id>")
+@login_required
 def checkout_reserva(reserva_id):
-    if "user_id" not in session:
-        return redirect(url_for("auth.login_page"))
-
     reserva = Reserva.query.get_or_404(reserva_id)
     if not _pode_ver_reserva(reserva):
         flash("Acesso restrito", "danger")
@@ -152,10 +153,8 @@ def checkout_reserva(reserva_id):
 
 
 @pagamentos_bp.route("/checkout/<int:reserva_id>", methods=["POST"])
+@login_required
 def processar_checkout_reserva(reserva_id):
-    if "user_id" not in session:
-        return redirect(url_for("auth.login_page"))
-
     reserva = Reserva.query.get_or_404(reserva_id)
     if not _pode_ver_reserva(reserva):
         flash("Acesso restrito", "danger")

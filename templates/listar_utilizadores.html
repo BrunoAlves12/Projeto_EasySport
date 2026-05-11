@@ -127,6 +127,7 @@
                     </a>
 
                     <form method="POST" action="{{ url_for('main.alterar_estado_utilizador', user_id=user.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                       <input type="hidden" name="estado" value="{% if user.estado.value == 'ativo' %}inativo{% else %}ativo{% endif %}" />
                       <button
                         class="users-button {% if user.estado.value == 'ativo' %}users-button--danger{% else %}users-button--success{% endif %}"

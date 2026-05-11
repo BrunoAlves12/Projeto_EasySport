@@ -1,11 +1,12 @@
 import calendar
-import os
 from datetime import date, datetime, time, timedelta
 
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
+from app.access import admin_required, login_required
 from app.extensions import db
 from app.models import EstadoReserva, Espaco, Pagamento, Reserva, User
+from app.security import imagem_segura
 
 reservas_bp = Blueprint("reservas", __name__)
 
@@ -291,12 +292,7 @@ def _contexto_checkout(reserva, pagamento=None):
     preco_hora = espaco.precoHora if espaco else 0
     pagamento = pagamento or Pagamento.query.filter_by(idReserva=reserva.id).first()
     valor_total = pagamento.valor if pagamento else duracao_horas * preco_hora
-    imagem_espaco = current_app.config["ESPACO_IMAGEM_DEFAULT"]
-
-    if espaco and espaco.imagem:
-        caminho_imagem = os.path.join(current_app.static_folder, espaco.imagem.replace("/", os.sep))
-        if os.path.exists(caminho_imagem):
-            imagem_espaco = espaco.imagem
+    imagem_espaco = imagem_segura(espaco.imagem if espaco else None)
 
     return {
         "reserva": reserva,
@@ -456,10 +452,8 @@ def _resumo_reservas(reservas_view):
 
 
 @reservas_bp.route("/reservar")
+@login_required
 def reservar_page():
-    if "user_id" not in session:
-        return redirect(url_for("auth.login_page"))
-
     espaco_id_selecionado = request.args.get("espaco_id", type=int)
     selected_espaco = _espaco_ativo(espaco_id_selecionado)
     checkout_prompt = None
@@ -553,10 +547,8 @@ def disponibilidade_dia(espaco_id):
 
 
 @reservas_bp.route("/reservar", methods=["POST"])
+@login_required
 def criar_reserva():
-    if "user_id" not in session:
-        return redirect(url_for("auth.login_page"))
-
     user_id = session["user_id"]
     espaco_id = request.form.get("espaco_id", type=int)
     inicio = _parse_datetime_local(request.form.get("inicio", "").strip())
@@ -616,14 +608,8 @@ def criar_reserva():
 
 
 @reservas_bp.route("/reservas")
+@admin_required
 def listar_reservas():
-    if "user_id" not in session:
-        return redirect(url_for("auth.login_page"))
-
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador", "danger")
-        return redirect(url_for("main.index"))
-
     filtros = {
         "q": request.args.get("q", "").strip(),
         "estado": request.args.get("estado", "").strip(),
@@ -649,10 +635,8 @@ def listar_reservas():
 
 
 @reservas_bp.route("/cancelar-reserva/<int:reserva_id>", methods=["POST"])
+@login_required
 def cancelar_reserva(reserva_id):
-    if "user_id" not in session:
-        return redirect(url_for("auth.login_page"))
-
     reserva = Reserva.query.get_or_404(reserva_id)
 
     if not session.get("is_admin") and reserva.idUser != session["user_id"]:
@@ -676,10 +660,8 @@ def cancelar_reserva(reserva_id):
 
 
 @reservas_bp.route("/minhas-reservas")
+@login_required
 def minha_reservas():
-    if "user_id" not in session:
-        return redirect(url_for("auth.login_page"))
-
     reservas = Reserva.query.filter_by(idUser=session["user_id"]).order_by(Reserva.dataInicio.desc()).all()
     users = {u.id: u for u in User.query.filter_by(isAdmin=False).all()}
     espacos = {e.id: e for e in Espaco.query.all()}

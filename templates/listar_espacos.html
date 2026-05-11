@@ -135,13 +135,19 @@
                       </a>
 
                       {% if e.ativo %}
-                        <a class="spaces-button spaces-button--danger" href="{{ url_for('espaco.desativar_espaco', id=e.id) }}">
-                          Desativar
-                        </a>
+                        <form method="post" action="{{ url_for('espaco.desativar_espaco', id=e.id) }}">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                          <button class="spaces-button spaces-button--danger" type="submit">
+                            Desativar
+                          </button>
+                        </form>
                       {% else %}
-                        <a class="spaces-button spaces-button--success" href="{{ url_for('espaco.ativar_espaco', id=e.id) }}">
-                          Ativar
-                        </a>
+                        <form method="post" action="{{ url_for('espaco.ativar_espaco', id=e.id) }}">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                          <button class="spaces-button spaces-button--success" type="submit">
+                            Ativar
+                          </button>
+                        </form>
                       {% endif %}
                     </div>
                   </div>

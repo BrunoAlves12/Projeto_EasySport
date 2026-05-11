@@ -93,6 +93,7 @@
               data-validation-stack-class="admin-messages flash-stack"
               data-validation-alert-class="admin-alert admin-alert--danger flash-message"
             >
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
               <div class="users-form-grid">
                 <div class="users-form__field">
                   <label for="nome">Nome</label>

@@ -253,6 +253,7 @@
                                   {% endif %}
 
                                   <form method="post" action="{{ url_for('reservas.cancelar_reserva', reserva_id=reserva.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                     <button
                                       class="reservations-button reservations-button--danger"
                                       type="submit"
@@ -291,6 +292,7 @@
                                   </a>
 
                                   <form method="post" action="{{ url_for('reservas.cancelar_reserva', reserva_id=reserva.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                     <button
                                       class="reservations-button reservations-button--danger"
                                       type="submit"

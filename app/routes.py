@@ -1,13 +1,14 @@
-import os
 import random
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from sqlalchemy import func
 
-from app.auth import _validar_password
+from app.access import admin_required, login_required
+from app.auth import _hash_password, _nome_tem_numero, _tem_idade_minima, _validar_password
 from app.extensions import db
 from app.models import EstadoReserva, EstadoUser, Espaco, Pagamento, Reserva, User
+from app.security import imagem_segura
 
 main_bp = Blueprint("main", __name__)
 
@@ -23,10 +24,7 @@ def _destaques_homepage():
     espacos_destaque = random.sample(espacos, quantidade)
 
     for espaco in espacos_destaque:
-        imagem = espaco.imagem or current_app.config["ESPACO_IMAGEM_DEFAULT"]
-        caminho_imagem = os.path.join(current_app.static_folder, imagem.replace("/", os.sep))
-
-        espaco.imagem_homepage = imagem if os.path.exists(caminho_imagem) else current_app.config["ESPACO_IMAGEM_DEFAULT"]
+        espaco.imagem_homepage = imagem_segura(espaco.imagem)
         espaco.modalidade_homepage = (espaco.modalidade or "Espaco desportivo").strip()
         espaco.descricao_curta = (espaco.descricao or "Espaco pronto para reserva.").strip()
 
@@ -39,30 +37,6 @@ def _utilizador_atual():
         return None
 
     return User.query.get(session["user_id"])
-
-
-# Bloqueia o acesso quando a sessao nao pertence a um admin.
-def _exigir_admin():
-    if "user_id" not in session:
-        flash("Tem de fazer login primeiro", "danger")
-        return redirect(url_for("auth.login_page"))
-
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador", "danger")
-        return redirect(url_for("main.index"))
-
-    return None
-
-
-# Garante uma imagem valida para apresentar um espaco.
-def _imagem_segura(imagem):
-    imagem = imagem or current_app.config["ESPACO_IMAGEM_DEFAULT"]
-    caminho_imagem = os.path.join(current_app.static_folder, imagem.replace("/", os.sep))
-
-    if os.path.exists(caminho_imagem):
-        return imagem
-
-    return current_app.config["ESPACO_IMAGEM_DEFAULT"]
 
 
 # Formata valores monetarios para apresentacao.
@@ -328,15 +302,8 @@ def espacos_homepage():
 
 
 @main_bp.route("/admin")
+@admin_required
 def admin_dashboard():
-    if "user_id" not in session:
-        flash("Tem de fazer login primeiro", "danger")
-        return redirect(url_for("auth.login_page"))
-
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador", "danger")
-        return redirect(url_for("main.index"))
-
     current_user = _utilizador_atual()
     now = datetime.now()
     inicio_hoje = datetime(now.year, now.month, now.day)
@@ -428,11 +395,8 @@ def admin_dashboard():
 
 
 @main_bp.route("/admin/estatisticas")
+@admin_required
 def estatisticas_sistema():
-    admin_redirect = _exigir_admin()
-    if admin_redirect:
-        return admin_redirect
-
     periodos = {
         "hoje": "Hoje",
         "mes": "Este mês",
@@ -474,7 +438,7 @@ def estatisticas_sistema():
     contexto_espaco = {
         "nome": espaco_selecionado.nome if espaco_selecionado else "Todos os espaços",
         "modalidade": (espaco_selecionado.modalidade or "Espaço desportivo").strip() if espaco_selecionado else "Visão agregada",
-        "imagem": _imagem_segura(espaco_selecionado.imagem if espaco_selecionado else None),
+        "imagem": imagem_segura(espaco_selecionado.imagem if espaco_selecionado else None),
     }
 
     return render_template(
@@ -500,33 +464,20 @@ def registar_page():
 
 
 @main_bp.route("/espaco-page")
+@admin_required
 def espaco_page():
-    if "user_id" not in session:
-        flash("Tem de fazer login primeiro", "danger")
-        return redirect(url_for("auth.login_page"))
-
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador", "danger")
-        return redirect(url_for("main.index"))
-
     return render_template("espaco.html", form_data={})
 
 
 @main_bp.route("/listar-espacos")
+@login_required
 def listar_espacos_page():
     return redirect(url_for("espaco.listar_espacos"))
 
 
 @main_bp.route("/listar-utilizadores")
+@admin_required
 def listar_utilizadores():
-    if "user_id" not in session:
-        flash("Tem de fazer login primeiro", "danger")
-        return redirect(url_for("auth.login_page"))
-
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador", "danger")
-        return redirect(url_for("main.index"))
-
     users = User.query.filter_by(isAdmin=False).order_by(User.nome.asc()).all()
     total_ativos = sum(1 for user in users if user.estado == EstadoUser.ativo)
     total_inativos = len(users) - total_ativos
@@ -540,35 +491,22 @@ def listar_utilizadores():
 
 
 @main_bp.route("/perfil-utilizador")
+@login_required
 def perfil_utilizador():
-    if "user_id" not in session:
-        flash("Tem de fazer login", "danger")
-        return redirect(url_for("auth.login_page"))
-
     user = User.query.get(session["user_id"])
     return _render_form_utilizador(user, _dados_form_user(user, {}))
 
 
 @main_bp.route("/editar-utilizador/<int:user_id>")
+@admin_required
 def editar_utilizador_page(user_id):
-    if "user_id" not in session:
-        flash("Tem de fazer login primeiro", "danger")
-        return redirect(url_for("auth.login_page"))
-
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador", "danger")
-        return redirect(url_for("main.index"))
-
     user = User.query.get_or_404(user_id)
     return _render_form_utilizador(user, _dados_form_user(user, {}))
 
 
 @main_bp.route("/editar-utilizador/<int:user_id>", methods=["POST"])
+@login_required
 def editar_utilizador(user_id):
-    if "user_id" not in session:
-        flash("Tem de fazer login primeiro", "danger")
-        return redirect(url_for("auth.login_page"))
-
     user = User.query.get_or_404(user_id)
 
     if not session.get("is_admin") and session["user_id"] != user_id:
@@ -601,11 +539,19 @@ def editar_utilizador(user_id):
 
     data_nascimento = _parse_data_nascimento(data_str)
     if data_nascimento is None:
-        flash("Data de nascimento invalida.", "danger")
+        flash("Data de nascimento inválida.", "danger")
         return _render_form_utilizador(user, form_data)
 
     if data_nascimento > date.today():
-        flash("Data de nascimento invalida.", "danger")
+        flash("Data de nascimento inválida.", "danger")
+        return _render_form_utilizador(user, form_data)
+
+    if _nome_tem_numero(nome):
+        flash("O nome não pode conter números.", "danger")
+        return _render_form_utilizador(user, form_data)
+
+    if not _tem_idade_minima(data_nascimento):
+        flash("É necessário ter pelo menos 16 anos para criar conta.", "danger")
         return _render_form_utilizador(user, form_data)
 
     if not _email_valido(email):
@@ -640,7 +586,7 @@ def editar_utilizador(user_id):
     user.dataNascimento = data_nascimento
 
     if nova_password:
-        user.password = nova_password
+        user.password = _hash_password(nova_password)
 
     if estado_atual != EstadoUser.inativo and novo_estado == EstadoUser.inativo:
         pode_inativar, mensagem = _pode_inativar_conta(user)
@@ -670,15 +616,8 @@ def editar_utilizador(user_id):
 
 
 @main_bp.route("/alterar-estado-utilizador/<int:user_id>", methods=["POST"])
+@admin_required
 def alterar_estado_utilizador(user_id):
-    if "user_id" not in session:
-        flash("Tem de fazer login primeiro", "danger")
-        return redirect(url_for("auth.login_page"))
-
-    if not session.get("is_admin"):
-        flash("Acesso restrito ao administrador", "danger")
-        return redirect(url_for("main.index"))
-
     user = User.query.get_or_404(user_id)
     novo_estado = request.form.get("estado", "").strip()
 

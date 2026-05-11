@@ -82,6 +82,7 @@
           {% endwith %}
 
           <form class="checkout-form" method="post" action="{{ url_for('pagamentos.processar_checkout_reserva', reserva_id=reserva.id) }}" data-custom-validation="true" data-validation-stack-class="auth-messages flash-stack checkout-auth-messages" data-validation-alert-class="auth-alert auth-alert--danger flash-message">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="checkout-field">
               <label for="emailFaturacao">Email</label>
               <input id="emailFaturacao" type="email" name="emailFaturacao" value="{{ form_data.emailFaturacao }}" autocomplete="email" required />
@@ -125,17 +126,17 @@
                 <img class="checkout-card-brands-image" src="{{ url_for('static', filename='img/pagamento_logo.png') }}" alt="Logotipos de pagamento" />
               </div>
 
-              <input id="numeroCartao" class="checkout-card-box__number" type="text" name="numeroCartao" inputmode="numeric" autocomplete="cc-number" placeholder="1234 1234 1234 1234" value="{{ form_data.numeroCartao }}" maxlength="23" required />
+              <input id="numeroCartao" class="checkout-card-box__number" type="text" name="numeroCartao" inputmode="numeric" autocomplete="cc-number" placeholder="1234 1234 1234 1234" value="{{ form_data.numeroCartao }}" pattern="[0-9 ]{12,23}" maxlength="23" required />
 
               <div class="checkout-card-box__meta">
                 <div class="checkout-field">
                   <label for="validade">Validade</label>
-                  <input id="validade" type="text" name="validade" placeholder="MM/AA" autocomplete="cc-exp" value="{{ form_data.validade }}" inputmode="numeric" maxlength="5" required />
+                  <input id="validade" type="text" name="validade" placeholder="MM/AA" autocomplete="cc-exp" value="{{ form_data.validade }}" inputmode="numeric" pattern="\d{2}/\d{2}" maxlength="5" required />
                 </div>
 
                 <div class="checkout-field">
                   <label for="cvv">CVV</label>
-                  <input id="cvv" type="password" name="cvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123" value="{{ form_data.cvv }}" maxlength="4" required />
+                  <input id="cvv" type="password" name="cvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123" value="{{ form_data.cvv }}" pattern="\d{3,4}" maxlength="4" required />
                 </div>
               </div>
             </div>

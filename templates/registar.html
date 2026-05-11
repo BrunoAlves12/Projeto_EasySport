@@ -43,9 +43,10 @@
         {% endwith %}
 
         <form class="auth-form" action="/register" method="post" data-custom-validation="true" data-validation-stack-class="auth-messages flash-stack" data-validation-alert-class="auth-alert auth-alert--danger flash-message">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="auth-field">
             <label for="nome">Nome</label>
-            <input id="nome" type="text" name="nome" placeholder="Nome" value="{{ form_data.get('nome', '') }}" required />
+            <input id="nome" type="text" name="nome" placeholder="Nome" value="{{ form_data.get('nome', '') }}" pattern="[^0-9]*" required />
           </div>
 
           <div class="auth-field">

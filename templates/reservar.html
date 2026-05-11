@@ -77,6 +77,7 @@
             </div>
 
             <form class="reserve-form" method="post" action="{{ url_for('reservas.criar_reserva') }}" data-custom-validation="true" data-validation-stack-class="auth-messages flash-stack reserve-auth-messages" data-validation-alert-class="auth-alert auth-alert--danger flash-message">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
               <div class="reserve-field">
                 <label for="espaco_id">Espa&ccedil;o</label>
                 {% if selected_espaco %}

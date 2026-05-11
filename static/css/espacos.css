@@ -180,6 +180,10 @@
   align-self: end;
 }
 
+.spaces-card__actions form {
+  margin: 0;
+}
+
 .spaces-button {
   min-height: 46px;
   padding: 0 20px;

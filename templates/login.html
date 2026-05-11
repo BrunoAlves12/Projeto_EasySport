@@ -43,6 +43,7 @@
         {% endwith %}
 
         <form class="auth-form" action="/login" method="post" data-custom-validation="true" data-validation-stack-class="auth-messages flash-stack" data-validation-alert-class="auth-alert auth-alert--danger flash-message">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="auth-field">
             <label for="username">Username ou email</label>
             <input id="username" type="text" name="username" placeholder="Username ou email" value="{{ form_data.get('login', '') }}" required />
